@@ -17,7 +17,7 @@
     <a title="HBHTTPServer Class Reference"></a>
     <header>
       <div class="content-wrapper">
-        <p><a href="../index.html">HummingbirdCore 0.1.1 Docs</a> (56% documented)</p>
+        <p><a href="../index.html">HummingbirdCore 0.2.0 Docs</a> (81% documented)</p>
         <p class="header-right"><a href="https://github.com/hummingbird-project/hummingbird-core"><img src="../img/gh.png"/>View on GitHub</a></p>
         <p class="header-right">
           <form role="search" action="../search.json">
@@ -40,12 +40,6 @@
             <a href="../Classes.html">Classes</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
-                <a href="../Classes/HBHTTPDecodeHandler.html">HBHTTPDecodeHandler</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../Classes/HBHTTPEncodeHandler.html">HBHTTPEncodeHandler</a>
-              </li>
-              <li class="nav-group-task">
                 <a href="../Classes/HBHTTPServer.html">HBHTTPServer</a>
               </li>
               <li class="nav-group-task">
@@ -56,9 +50,6 @@
               </li>
               <li class="nav-group-task">
                 <a href="../Classes/HBHTTPServer/Configuration.html">– Configuration</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../Classes/HBHTTPServerHandler.html">HBHTTPServerHandler</a>
               </li>
               <li class="nav-group-task">
                 <a href="../Classes/HBRequestBodyStreamer.html">HBRequestBodyStreamer</a>
@@ -132,7 +123,7 @@
 
                 </div>
               </div>
-            <p>HTTP server</p>
+            <p>HTTP server class</p>
 
           </section>
           <section class="section task-group-section">
@@ -151,7 +142,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>EventLoopGroup used by server</p>
 
                       </div>
                       <div class="declaration">
@@ -178,7 +169,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Server configuration</p>
 
                       </div>
                       <div class="declaration">
@@ -205,7 +196,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>object initializing HTTP child handlers. This defaults to creating an HTTP1 channel</p>
 
                       </div>
                       <div class="declaration">
@@ -232,7 +223,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Server channel</p>
 
                       </div>
                       <div class="declaration">
@@ -259,7 +250,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Position to place channel handler</p>
 
                         <a href="../Classes/HBHTTPServer/ChannelPosition.html" class="slightly-smaller">See more</a>
                       </div>
@@ -287,7 +278,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>HTTP server errors</p>
 
                         <a href="../Classes/HBHTTPServer/Error.html" class="slightly-smaller">See more</a>
                       </div>
@@ -296,34 +287,6 @@
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">Error</span> <span class="p">:</span> <span class="kt">Swift</span><span class="o">.</span><span class="kt">Error</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:15HummingbirdCore12HBHTTPServerC13ConfigurationV"></a>
-                    <a name="//apple_ref/swift/Struct/Configuration" class="dashAnchor"></a>
-                    <a class="token" href="#/s:15HummingbirdCore12HBHTTPServerC13ConfigurationV">Configuration</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>HTTP server configuration</p>
-
-                        <a href="../Classes/HBHTTPServer/Configuration.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Configuration</span></code></pre>
 
                         </div>
                       </div>
@@ -413,6 +376,37 @@ created for each child channel</p>
 <span class="kd">public</span> <span class="kd">func</span> <span class="nf">addChannelHandler</span><span class="p">(</span><span class="n">_</span> <span class="nv">handler</span><span class="p">:</span> <span class="kd">@autoclosure</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">ChannelHandler</span><span class="p">,</span> <span class="nv">position</span><span class="p">:</span> <span class="kt"><a href="../Classes/HBHTTPServer/ChannelPosition.html">ChannelPosition</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">afterHTTP</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>handler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>autoclosure generating handler</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>position</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>position to place channel handler</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -587,9 +581,33 @@ created for each child channel</p>
                           </tbody>
                         </table>
                       </div>
-                      <div>
-                        <h4>Return Value</h4>
-                        <p>&lt;#description#&gt;</p>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:15HummingbirdCore12HBHTTPServerC13ConfigurationV"></a>
+                    <a name="//apple_ref/swift/Struct/Configuration" class="dashAnchor"></a>
+                    <a class="token" href="#/s:15HummingbirdCore12HBHTTPServerC13ConfigurationV">Configuration</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>HTTP server configuration</p>
+
+                        <a href="../Classes/HBHTTPServer/Configuration.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Configuration</span></code></pre>
+
+                        </div>
                       </div>
                     </section>
                   </div>

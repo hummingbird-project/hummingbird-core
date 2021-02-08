@@ -17,7 +17,7 @@
     <a title="HBResponseBody Enumeration Reference"></a>
     <header>
       <div class="content-wrapper">
-        <p><a href="../index.html">HummingbirdCore 0.1.1 Docs</a> (56% documented)</p>
+        <p><a href="../index.html">HummingbirdCore 0.2.0 Docs</a> (81% documented)</p>
         <p class="header-right"><a href="https://github.com/hummingbird-project/hummingbird-core"><img src="../img/gh.png"/>View on GitHub</a></p>
         <p class="header-right">
           <form role="search" action="../search.json">
@@ -40,12 +40,6 @@
             <a href="../Classes.html">Classes</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
-                <a href="../Classes/HBHTTPDecodeHandler.html">HBHTTPDecodeHandler</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../Classes/HBHTTPEncodeHandler.html">HBHTTPEncodeHandler</a>
-              </li>
-              <li class="nav-group-task">
                 <a href="../Classes/HBHTTPServer.html">HBHTTPServer</a>
               </li>
               <li class="nav-group-task">
@@ -56,9 +50,6 @@
               </li>
               <li class="nav-group-task">
                 <a href="../Classes/HBHTTPServer/Configuration.html">– Configuration</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../Classes/HBHTTPServerHandler.html">HBHTTPServerHandler</a>
               </li>
               <li class="nav-group-task">
                 <a href="../Classes/HBRequestBodyStreamer.html">HBRequestBodyStreamer</a>
@@ -132,7 +123,7 @@
 
                 </div>
               </div>
-            <p>Response body</p>
+            <p>Response body. Either static</p>
 
           </section>
           <section class="section task-group-section">
@@ -151,7 +142,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>ByteBuffer</p>
+                        <p>Body stored as a single ByteBuffer</p>
 
                       </div>
                       <div class="declaration">
@@ -232,7 +223,10 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Construct a <code>HBResponseBody</code> from a closure supplying <code>ByteBuffer</code>&lsquo;s.</p>
+
+<p>This function should supply <code>.byteBuffer(ByteBuffer)</code> until there is no more data, at which
+point is should return <code>&#39;end</code>.</p>
 
                       </div>
                       <div class="declaration">
@@ -242,6 +236,25 @@
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">streamCallback</span><span class="p">(</span><span class="n">_</span> <span class="nv">closure</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">EventLoop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">HBResponseBody</span><span class="o">.</span><span class="kt"><a href="../Enums/HBResponseBody/StreamResult.html">StreamResult</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">HBResponseBody</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>closure</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Closure called whenever a new ByteBuffer is needed</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>

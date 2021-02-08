@@ -1,20 +1,6 @@
 {
   "warnings": [
     {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/BindAddress.swift",
-      "line": 3,
-      "symbol": "HBBindAddress.hostname(_:port:)",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/BindAddress.swift",
-      "line": 4,
-      "symbol": "HBBindAddress.unixDomainSocket(path:)",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/ChannelInitializer.swift",
       "line": 5,
       "symbol": "HBChannelInitializer.initialize(_:channel:responder:)",
@@ -71,253 +57,57 @@
       "warning": "undocumented"
     },
     {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPHandlers.swift",
-      "line": 38,
-      "symbol": "HBHTTPDecodeHandler.init(configuration:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPHandlers.swift",
-      "line": 107,
-      "symbol": "HBHTTPEncodeHandler.init(configuration:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 7,
-      "symbol": "HBHTTPServer.eventLoopGroup",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 8,
-      "symbol": "HBHTTPServer.configuration",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 9,
-      "symbol": "HBHTTPServer.httpChannelInitializer",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 10,
-      "symbol": "HBHTTPServer.channel",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 14,
-      "symbol": "HBHTTPServer.ChannelPosition",
-      "symbol_kind": "source.lang.swift.decl.enum",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 15,
-      "symbol": "HBHTTPServer.ChannelPosition.beforeHTTP",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 16,
-      "symbol": "HBHTTPServer.ChannelPosition.afterHTTP",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 19,
-      "symbol": "HBHTTPServer.Error",
-      "symbol_kind": "source.lang.swift.decl.enum",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 20,
-      "symbol": "HBHTTPServer.Error.serverNotRunning",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 25,
-      "symbol": "HBHTTPServer.Configuration.address",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 26,
-      "symbol": "HBHTTPServer.Configuration.serverName",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 27,
-      "symbol": "HBHTTPServer.Configuration.maxUploadSize",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 28,
-      "symbol": "HBHTTPServer.Configuration.reuseAddress",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 29,
-      "symbol": "HBHTTPServer.Configuration.tcpNoDelay",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 30,
-      "symbol": "HBHTTPServer.Configuration.withPipeliningAssistance",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServer.swift",
-      "line": 32,
-      "symbol": "HBHTTPServer.Configuration.init(address:serverName:maxUploadSize:reuseAddress:tcpNoDelay:withPipeliningAssistance:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/HTTPServerHandler.swift",
-      "line": 16,
-      "symbol": "HBHTTPServerHandler.init(responder:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 6,
-      "symbol": "HBRequestBody.byteBuffer(_:)",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 7,
-      "symbol": "HBRequestBody.stream(_:)",
-      "symbol_kind": "source.lang.swift.decl.enumelement",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 9,
-      "symbol": "HBRequestBody.buffer",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 18,
-      "symbol": "HBRequestBody.stream",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 27,
-      "symbol": "HBRequestBody.consumeBody(on:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 36,
-      "symbol": "HBRequestBody.streamBody(on:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 51,
-      "symbol": "HBRequestBodyStreamer.FeedInput",
-      "symbol_kind": "source.lang.swift.decl.enum",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 52,
+      "line": 63,
       "symbol": "HBRequestBodyStreamer.FeedInput.byteBuffer(_:)",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 53,
+      "line": 64,
       "symbol": "HBRequestBodyStreamer.FeedInput.error(_:)",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 54,
+      "line": 65,
       "symbol": "HBRequestBodyStreamer.FeedInput.end",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 57,
-      "symbol": "HBRequestBodyStreamer.ConsumeOutput",
-      "symbol_kind": "source.lang.swift.decl.enum",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 58,
+      "line": 70,
       "symbol": "HBRequestBodyStreamer.ConsumeOutput.byteBuffers(_:)",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/RequestBody.swift",
-      "line": 59,
+      "line": 71,
       "symbol": "HBRequestBodyStreamer.ConsumeOutput.end",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/ResponseBody.swift",
-      "line": 12,
-      "symbol": "HBResponseBody.streamCallback(_:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.static",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/ResponseBody.swift",
-      "line": 18,
+      "line": 24,
       "symbol": "HBResponseBody.StreamResult.byteBuffer(_:)",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/ResponseBody.swift",
-      "line": 19,
+      "line": 25,
       "symbol": "HBResponseBody.StreamResult.end",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
       "file": "/Users/adamfowler/Developer/server/hummingbird/hummingbird-core/Sources/HummingbirdCore/ResponseBody.swift",
-      "line": 25,
+      "line": 31,
       "symbol": "HBResponseBodyStreamer.read(on:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"

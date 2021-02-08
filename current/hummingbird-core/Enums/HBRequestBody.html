@@ -17,7 +17,7 @@
     <a title="HBRequestBody Enumeration Reference"></a>
     <header>
       <div class="content-wrapper">
-        <p><a href="../index.html">HummingbirdCore 0.1.1 Docs</a> (56% documented)</p>
+        <p><a href="../index.html">HummingbirdCore 0.2.0 Docs</a> (81% documented)</p>
         <p class="header-right"><a href="https://github.com/hummingbird-project/hummingbird-core"><img src="../img/gh.png"/>View on GitHub</a></p>
         <p class="header-right">
           <form role="search" action="../search.json">
@@ -40,12 +40,6 @@
             <a href="../Classes.html">Classes</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
-                <a href="../Classes/HBHTTPDecodeHandler.html">HBHTTPDecodeHandler</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../Classes/HBHTTPEncodeHandler.html">HBHTTPEncodeHandler</a>
-              </li>
-              <li class="nav-group-task">
                 <a href="../Classes/HBHTTPServer.html">HBHTTPServer</a>
               </li>
               <li class="nav-group-task">
@@ -56,9 +50,6 @@
               </li>
               <li class="nav-group-task">
                 <a href="../Classes/HBHTTPServer/Configuration.html">– Configuration</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../Classes/HBHTTPServerHandler.html">HBHTTPServerHandler</a>
               </li>
               <li class="nav-group-task">
                 <a href="../Classes/HBRequestBodyStreamer.html">HBRequestBodyStreamer</a>
@@ -132,7 +123,7 @@
 
                 </div>
               </div>
-            <p>Request Body. Either a ByteBuffer or a streaming of ByteBuffer</p>
+            <p>Request Body. Either a ByteBuffer or a ByteBuffer streamer</p>
 
           </section>
           <section class="section task-group-section">
@@ -151,7 +142,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Static ByteBuffer</p>
 
                       </div>
                       <div class="declaration">
@@ -178,7 +169,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>ByteBuffer streamer</p>
 
                       </div>
                       <div class="declaration">
@@ -205,7 +196,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Return as ByteBuffer</p>
 
                       </div>
                       <div class="declaration">
@@ -232,7 +223,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Return as streamer if it is a streamer</p>
 
                       </div>
                       <div class="declaration">
@@ -259,7 +250,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Provide body as a single ByteBuffer</p>
 
                       </div>
                       <div class="declaration">
@@ -269,6 +260,29 @@
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">consumeBody</span><span class="p">(</span><span class="n">on</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt">EventLoop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">ByteBuffer</span><span class="p">?</span><span class="o">&gt;</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>EventLoop to use</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>EventLoopFuture that will be fulfilled with ByteBuffer. If no body is include then return <code>nil</code></p>
                       </div>
                     </section>
                   </div>
@@ -286,7 +300,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Return as streaming body. Can convert empty body to a streamer</p>
 
                       </div>
                       <div class="declaration">
@@ -296,6 +310,29 @@
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">streamBody</span><span class="p">(</span><span class="n">on</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt">EventLoop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/HBRequestBodyStreamer.html">HBRequestBodyStreamer</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>EventLoop to use</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>streaming body</p>
                       </div>
                     </section>
                   </div>

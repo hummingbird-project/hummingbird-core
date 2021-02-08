@@ -17,7 +17,7 @@
     <a title="Configuration Structure Reference"></a>
     <header>
       <div class="content-wrapper">
-        <p><a href="../../index.html">HummingbirdCore 0.1.1 Docs</a> (56% documented)</p>
+        <p><a href="../../index.html">HummingbirdCore 0.2.0 Docs</a> (81% documented)</p>
         <p class="header-right"><a href="https://github.com/hummingbird-project/hummingbird-core"><img src="../../img/gh.png"/>View on GitHub</a></p>
         <p class="header-right">
           <form role="search" action="../../search.json">
@@ -40,12 +40,6 @@
             <a href="../../Classes.html">Classes</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
-                <a href="../../Classes/HBHTTPDecodeHandler.html">HBHTTPDecodeHandler</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../../Classes/HBHTTPEncodeHandler.html">HBHTTPEncodeHandler</a>
-              </li>
-              <li class="nav-group-task">
                 <a href="../../Classes/HBHTTPServer.html">HBHTTPServer</a>
               </li>
               <li class="nav-group-task">
@@ -56,9 +50,6 @@
               </li>
               <li class="nav-group-task">
                 <a href="../../Classes/HBHTTPServer/Configuration.html">– Configuration</a>
-              </li>
-              <li class="nav-group-task">
-                <a href="../../Classes/HBHTTPServerHandler.html">HBHTTPServerHandler</a>
               </li>
               <li class="nav-group-task">
                 <a href="../../Classes/HBRequestBodyStreamer.html">HBRequestBodyStreamer</a>
@@ -151,7 +142,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Bind address for server</p>
 
                       </div>
                       <div class="declaration">
@@ -178,7 +169,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Server name to return in &ldquo;server&rdquo; header</p>
 
                       </div>
                       <div class="declaration">
@@ -205,7 +196,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Maximum upload size allowed</p>
 
                       </div>
                       <div class="declaration">
@@ -232,7 +223,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Allows socket to be bound to an address that is already in use.</p>
 
                       </div>
                       <div class="declaration">
@@ -259,7 +250,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Disables the Nagle algorithm for send coalescing.</p>
 
                       </div>
                       <div class="declaration">
@@ -286,7 +277,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Pipelining ensures that only one http request is processed at one time</p>
 
                       </div>
                       <div class="declaration">
@@ -313,7 +304,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Initialize HTTP server configuration</p>
 
                       </div>
                       <div class="declaration">
@@ -330,6 +321,85 @@
 <span class="p">)</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>address</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Bind address for server</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>serverName</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Server name to return in &ldquo;server&rdquo; header</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>maxUploadSize</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Maximum upload size allowed</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>reuseAddress</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Allows socket to be bound to an address that is already in use.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>tcpNoDelay</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Disables the Nagle algorithm for send coalescing.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>withPipeliningAssistance</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Pipelining ensures that only one http request is processed at one time</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
