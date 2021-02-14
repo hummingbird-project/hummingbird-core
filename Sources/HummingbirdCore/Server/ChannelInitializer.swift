@@ -9,7 +9,6 @@ public protocol HBChannelInitializer {
 /// Setup child channel for HTTP1
 public struct HTTP1ChannelInitializer: HBChannelInitializer {
     public init(upgraders: [HTTPServerProtocolUpgrader] = []) {
-        print("Upgraders: \(upgraders)")
         self.upgraders = upgraders
     }
 
@@ -17,7 +16,6 @@ public struct HTTP1ChannelInitializer: HBChannelInitializer {
         var serverUpgrade: NIOHTTPServerUpgradeConfiguration?
         if self.upgraders.count > 0 {
             serverUpgrade = (self.upgraders, { channel in
-                print("Core: Upgraded")
                 childHandlers.forEach {
                     _ = channel.pipeline.removeHandler($0)
                 }
