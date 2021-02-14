@@ -16,7 +16,7 @@ public struct HTTP1ChannelInitializer: HBChannelInitializer {
     public init(upgraders: [HTTPServerProtocolUpgrader] = []) {
         self.upgraders = upgraders
     }
-    
+
     /// Initialize HTTP1 channel
     /// - Parameters:
     ///   - channel: channel
