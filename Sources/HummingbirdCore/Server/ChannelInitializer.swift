@@ -19,7 +19,7 @@ public struct HTTP1ChannelInitializer: HBChannelInitializer {
             serverUpgrade = (self.upgraders, { channel in
                 print("Core: Upgraded")
                 childHandlers.forEach {
-                    channel.pipeline.removeHandler($0)
+                    _ = channel.pipeline.removeHandler($0)
                 }
             })
         }
