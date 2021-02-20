@@ -18,11 +18,14 @@ public enum HBRequestBody {
     }
 
     /// Return as streamer if it is a streamer
-    public var stream: HBRequestBodyStreamer {
+    public var stream: HBRequestBodyStreamer? {
         switch self {
         case .stream(let streamer):
             return streamer
-        default:
+        case .byteBuffer(let buffer):
+            if buffer == nil {
+                return nil
+            }
             preconditionFailure("Cannot get stream from already consumed stream")
         }
     }
@@ -39,4 +42,3 @@ public enum HBRequestBody {
         }
     }
 }
-
