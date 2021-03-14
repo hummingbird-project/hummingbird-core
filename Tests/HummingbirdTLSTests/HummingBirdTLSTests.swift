@@ -9,7 +9,7 @@ import XCTest
 
 class HummingBirdTLSTests: XCTestCase {
     struct HelloResponder: HBHTTPResponder {
-        func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+        func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
             let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
             let responseBody = context.channel.allocator.buffer(string: "Hello")
             let response = HBHTTPResponse(head: responseHead, body: .byteBuffer(responseBody))

@@ -27,7 +27,7 @@ class HummingBirdCoreTests: XCTestCase {
 
     func testConnect() {
         struct HelloResponder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
                 let responseBody = context.channel.allocator.buffer(string: "Hello")
                 let response = HBHTTPResponse(head: responseHead, body: .byteBuffer(responseBody))
@@ -50,7 +50,7 @@ class HummingBirdCoreTests: XCTestCase {
 
     func testConsumeBody() {
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 request.body.consumeBody(on: context.eventLoop).whenComplete { result in
                     switch result {
                     case .success(let buffer):
@@ -88,7 +88,7 @@ class HummingBirdCoreTests: XCTestCase {
 
     func testConsumeAllBody() {
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 var size = 0
                 request.body.stream!.consumeAll(on: context.eventLoop) { buffer in
                     size += buffer.readableBytes
@@ -127,7 +127,7 @@ class HummingBirdCoreTests: XCTestCase {
 
     func testStreamBody() {
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 let body: HBResponseBody = .streamCallback { _ in
                     return request.body.stream!.consume(on: context.eventLoop).map { output in
                         switch output {
@@ -164,7 +164,7 @@ class HummingBirdCoreTests: XCTestCase {
 
     func testStreamBodySlowProcess() {
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 let body: HBResponseBody = .streamCallback { _ in
                     return request.body.stream!.consume(on: context.eventLoop).flatMap { output in
                         switch output {
@@ -213,7 +213,7 @@ class HummingBirdCoreTests: XCTestCase {
             }
         }
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 request.body.consumeBody(on: context.eventLoop).whenComplete { result in
                     let result = result.flatMap { buffer -> Result<HBHTTPResponse, Error> in
                         guard let buffer = buffer else {
@@ -260,7 +260,7 @@ class HummingBirdCoreTests: XCTestCase {
             }
         }
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 let response = HBHTTPResponse(
                     head: .init(version: .init(major: 1, minor: 1), status: .accepted),
                     body: .empty
@@ -287,7 +287,7 @@ class HummingBirdCoreTests: XCTestCase {
 
     func testMaxUploadSize() {
         struct Responder: HBHTTPResponder {
-            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> ()) {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 request.body.consumeBody(on: context.eventLoop).whenComplete { result in
                     let result = result.flatMap { buffer -> Result<HBHTTPResponse, Error> in
                         guard let buffer = buffer else {
