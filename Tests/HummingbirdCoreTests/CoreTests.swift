@@ -362,6 +362,5 @@ class HummingBirdCoreTests: XCTestCase {
         } catch {
             XCTFail("\(error)")
         }
-
     }
 }
