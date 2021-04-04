@@ -3,7 +3,7 @@ import NIOExtras
 import NIOHTTP1
 
 /// HTTP server class
-public class HBHTTPServer {
+public class HBHTTPServer: HBServer {
     /// EventLoopGroup used by server
     public let eventLoopGroup: EventLoopGroup
     /// Server configuration
@@ -46,9 +46,18 @@ public class HBHTTPServer {
     /// created for each child channel
     /// - Parameters:
     ///   - handler: autoclosure generating handler
+    @discardableResult public func addChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self {
+        self._additionalChildHandlers.append((handler: handler, position: .afterHTTP))
+        return self
+    }
+
+    /// Append to list of `ChannelHandler`s to be added to server child channels. Need to provide a closure so new instance of these handlers are
+    /// created for each child channel
+    /// - Parameters:
+    ///   - handler: autoclosure generating handler
     ///   - position: position to place channel handler
-    @discardableResult public func addChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler, position: ChannelPosition = .afterHTTP) -> Self {
-        self._additionalChildHandlers.append((handler: handler, position: position))
+    @discardableResult public func addTLSChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self {
+        self._additionalChildHandlers.append((handler: handler, position: .beforeHTTP))
         return self
     }
 
