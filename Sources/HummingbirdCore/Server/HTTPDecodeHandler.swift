@@ -21,7 +21,7 @@ final class HBHTTPDecodeHandler: ChannelDuplexHandler, RemovableChannelHandler {
     /// handler state
     var state: State
 
-    init(configuration: HBHTTPServer.Configuration) {
+    init(configuration: HBHTTPServerConfiguration) {
         self.maxUploadSize = configuration.maxUploadSize
         self.maxStreamingBufferSize = configuration.maxStreamingBufferSize
         self.state = .idle

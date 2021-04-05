@@ -8,7 +8,7 @@ final class HBHTTPEncodeHandler: ChannelOutboundHandler, RemovableChannelHandler
 
     let serverName: String?
 
-    init(configuration: HBHTTPServer.Configuration) {
+    init(configuration: HBHTTPServerConfiguration) {
         self.serverName = configuration.serverName
     }
 

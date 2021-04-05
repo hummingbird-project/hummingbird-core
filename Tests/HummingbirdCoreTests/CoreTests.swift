@@ -34,7 +34,7 @@ class HummingBirdCoreTests: XCTestCase {
                 onComplete(.success(response))
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
         XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -69,7 +69,7 @@ class HummingBirdCoreTests: XCTestCase {
                 }
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -108,7 +108,7 @@ class HummingBirdCoreTests: XCTestCase {
                 }
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -145,7 +145,7 @@ class HummingBirdCoreTests: XCTestCase {
                 return onComplete(.success(response))
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -183,7 +183,7 @@ class HummingBirdCoreTests: XCTestCase {
                 onComplete(.success(response))
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxStreamingBufferSize: 256 * 1024))
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -229,7 +229,7 @@ class HummingBirdCoreTests: XCTestCase {
                 }
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
         server.addChannelHandler(SlowInputChannelHandler())
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
@@ -268,7 +268,7 @@ class HummingBirdCoreTests: XCTestCase {
                 onComplete(.success(response))
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
         server.addChannelHandler(CreateErrorHandler())
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
@@ -303,7 +303,7 @@ class HummingBirdCoreTests: XCTestCase {
                 }
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxUploadSize: 64 * 1024))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080), maxUploadSize: 64 * 1024))
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -333,12 +333,12 @@ class HummingBirdCoreTests: XCTestCase {
                 onComplete(.success(response))
             }
         }
-        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
+        let server = HBPosixHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
 
         do {
             let channel = EmbeddedChannel()
             try channel.pipeline.addHandlers(
-                server.getChildHandlers(responder: HelloResponder())
+                server.getChildChannelHandlers(responder: HelloResponder())
             ).wait()
 
             // write request

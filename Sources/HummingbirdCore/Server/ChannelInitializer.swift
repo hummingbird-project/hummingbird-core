@@ -8,7 +8,7 @@ public protocol HBChannelInitializer {
     ///   - channel: channel
     ///   - childHandlers: Channel handlers to add
     ///   - configuration: server configuration
-    func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void>
+    func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServerConfiguration) -> EventLoopFuture<Void>
 }
 
 /// Setup child channel for HTTP1
@@ -22,7 +22,7 @@ public struct HTTP1ChannelInitializer: HBChannelInitializer {
     ///   - channel: channel
     ///   - childHandlers: Channel handlers to add
     ///   - configuration: server configuration
-    public func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void> {
+    public func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServerConfiguration) -> EventLoopFuture<Void> {
         var serverUpgrade: NIOHTTPServerUpgradeConfiguration?
         if self.upgraders.count > 0 {
             serverUpgrade = (self.upgraders, { channel in

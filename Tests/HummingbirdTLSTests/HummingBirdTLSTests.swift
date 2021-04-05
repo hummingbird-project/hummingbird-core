@@ -22,7 +22,7 @@ class HummingBirdTLSTests: XCTestCase {
     func testConnect() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        let server = HBHTTPServer(group: eventLoopGroup, configuration: .init(address: .hostname(port: 8000)))
+        let server = HBPosixHTTPServer(group: eventLoopGroup, configuration: .init(address: .hostname(port: 8000)))
         try server.addTLS(tlsConfiguration: self.getServerTLSConfiguration())
         try server.start(responder: HelloResponder()).wait()
         defer { XCTAssertNoThrow(try server.stop().wait()) }
