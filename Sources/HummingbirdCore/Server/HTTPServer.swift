@@ -2,7 +2,7 @@ import NIO
 
 public protocol HBHTTPServer: AnyObject {
     /// Server configuration
-    var configuration: HBHTTPServerConfiguration { get }
+    var serverConfiguration: HBHTTPServerConfiguration { get }
     /// EventLoopGroup used by server
     var eventLoopGroup: EventLoopGroup { get }
     /// object initializing HTTP child handlers. This defaults to creating an HTTP1 channel
@@ -30,58 +30,24 @@ extension HBHTTPServer {
 
     public func getChildChannelHandlers(responder: HBHTTPResponder) -> [RemovableChannelHandler] {
         return childChannelHandlers.map { $0()} + [
-            HBHTTPEncodeHandler(configuration: self.configuration),
-            HBHTTPDecodeHandler(configuration: self.configuration),
+            HBHTTPEncodeHandler(configuration: self.serverConfiguration),
+            HBHTTPDecodeHandler(configuration: self.serverConfiguration),
             HBHTTPServerHandler(responder: responder),
         ]
     }
 }
 
-/// HTTP server configuration
-public struct HBHTTPServerConfiguration {
+public protocol HBHTTPServerConfiguration {
     /// Bind address for server
-    public let address: HBBindAddress
+    var address: HBBindAddress { get }
     /// Server name to return in "server" header
-    public let serverName: String?
+    var serverName: String? { get }
     /// Maximum upload size allowed
-    public let maxUploadSize: Int
+    var maxUploadSize: Int { get }
     /// Maximum size of buffer for streaming request payloads
-    public let maxStreamingBufferSize: Int
-    /// Defines the maximum length for the queue of pending connections
-    public let backlog: Int
+    var maxStreamingBufferSize: Int { get }
     /// Allows socket to be bound to an address that is already in use.
-    public let reuseAddress: Bool
-    /// Disables the Nagle algorithm for send coalescing.
-    public let tcpNoDelay: Bool
+    var reuseAddress: Bool { get }
     /// Pipelining ensures that only one http request is processed at one time
-    public let withPipeliningAssistance: Bool
-
-    /// Initialize HTTP server configuration
-    /// - Parameters:
-    ///   - address: Bind address for server
-    ///   - serverName: Server name to return in "server" header
-    ///   - maxUploadSize: Maximum upload size allowed
-    ///   - maxStreamingBufferSize: Maximum size of buffer for streaming request payloads
-    ///   - reuseAddress: Allows socket to be bound to an address that is already in use.
-    ///   - tcpNoDelay: Disables the Nagle algorithm for send coalescing.
-    ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
-    public init(
-        address: HBBindAddress = .hostname(),
-        serverName: String? = nil,
-        maxUploadSize: Int = 2 * 1024 * 1024,
-        maxStreamingBufferSize: Int = 1 * 1024 * 1024,
-        backlog: Int = 256,
-        reuseAddress: Bool = true,
-        tcpNoDelay: Bool = false,
-        withPipeliningAssistance: Bool = true
-    ) {
-        self.address = address
-        self.serverName = serverName
-        self.maxUploadSize = maxUploadSize
-        self.maxStreamingBufferSize = maxStreamingBufferSize
-        self.backlog = backlog
-        self.reuseAddress = reuseAddress
-        self.tcpNoDelay = tcpNoDelay
-        self.withPipeliningAssistance = withPipeliningAssistance
-    }
+    var withPipeliningAssistance: Bool { get }
 }
