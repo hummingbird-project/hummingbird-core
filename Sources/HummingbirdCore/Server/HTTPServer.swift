@@ -34,8 +34,7 @@ extension HBHTTPServer {
     }
 
     /// Return all child channel handlers
-    /// - Parameter responder: <#responder description#>
-    /// - Returns: <#description#>
+    /// - Parameter responder: HTTP responder providing responses for requests
     public func getChildChannelHandlers(responder: HBHTTPResponder) -> [RemovableChannelHandler] {
         return childChannelHandlers.getHandlers() + [
             HBHTTPEncodeHandler(configuration: self.serverConfiguration),
