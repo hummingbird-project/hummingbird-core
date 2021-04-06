@@ -7,7 +7,7 @@ public class HBSocketsHTTPServer: HBHTTPServer {
     /// EventLoopGroup used by server
     public let eventLoopGroup: EventLoopGroup
     /// Server configuration
-    public var serverConfiguration: HBHTTPServerConfiguration { return configuration }
+    public var serverConfiguration: HBHTTPServerConfiguration { return self.configuration }
     public let configuration: Configuration
     /// object initializing HTTP child handlers. This defaults to creating an HTTP1 channel
     public var httpChannelInitializer: HBChannelInitializer
@@ -53,7 +53,7 @@ public class HBSocketsHTTPServer: HBHTTPServer {
     public func start(responder: HBHTTPResponder) -> EventLoopFuture<Void> {
         func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
             let tlsChannelHandler = self.tlsChannelHandler?()
-            return channel.pipeline.addHandlers(tlsChannelHandler.map { [$0]} ?? []).flatMap {
+            return channel.pipeline.addHandlers(tlsChannelHandler.map { [$0] } ?? []).flatMap {
                 let childHandlers = self.getChildChannelHandlers(responder: responder)
                 return self.httpChannelInitializer.initialize(channel: channel, childHandlers: childHandlers, configuration: self.configuration)
             }
@@ -173,5 +173,4 @@ extension HBSocketsHTTPServer {
             self.withPipeliningAssistance = withPipeliningAssistance
         }
     }
-
 }
