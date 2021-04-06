@@ -3,7 +3,7 @@ import NIOExtras
 import NIOHTTP1
 
 /// HTTP server class
-public class HBPosixHTTPServer: HBHTTPServer {
+public class HBSocketsHTTPServer: HBHTTPServer {
     /// EventLoopGroup used by server
     public let eventLoopGroup: EventLoopGroup
     /// Server configuration
@@ -12,7 +12,7 @@ public class HBPosixHTTPServer: HBHTTPServer {
     /// object initializing HTTP child handlers. This defaults to creating an HTTP1 channel
     public var httpChannelInitializer: HBChannelInitializer
     /// list of child channel handlers
-    public var childChannelHandlers: [() -> RemovableChannelHandler]
+    public var childChannelHandlers: HBHTTPChannelHandlers
     /// Server channel
     public var channel: Channel?
 
@@ -32,7 +32,7 @@ public class HBPosixHTTPServer: HBHTTPServer {
         self.eventLoopGroup = group
         self.configuration = configuration
         self.quiesce = nil
-        self.childChannelHandlers = []
+        self.childChannelHandlers = .init()
         // defaults to HTTP1
         self.httpChannelInitializer = HTTP1ChannelInitializer()
     }
@@ -124,7 +124,7 @@ public class HBPosixHTTPServer: HBHTTPServer {
     private var tlsChannelHandler: (() -> RemovableChannelHandler)?
 }
 
-extension HBPosixHTTPServer {
+extension HBSocketsHTTPServer {
     /// HTTP server configuration
     public struct Configuration: HBHTTPServerConfiguration {
         /// Bind address for server

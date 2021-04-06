@@ -8,14 +8,19 @@ public protocol HBHTTPServer: AnyObject {
     /// object initializing HTTP child handlers. This defaults to creating an HTTP1 channel
     var httpChannelInitializer: HBChannelInitializer { get set }
     /// array of child channel handlers
-    var childChannelHandlers: [() -> RemovableChannelHandler] { get set }
+    var childChannelHandlers: HBHTTPChannelHandlers { get set }
 
+    /// Start HTTP server
+    /// - Parameter responder: HTTP responder providing responses for requests
     func start(responder: HBHTTPResponder) -> EventLoopFuture<Void>
+    /// Stop HTTP server
     func stop() -> EventLoopFuture<Void>
+    /// Wait while HTTP server is running
     func wait() throws
-    
-    @discardableResult func addTLSChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self
 
+    /// Add TLS channel handler
+    /// - Parameter handler: autoclosure generating TLS handler
+    @discardableResult func addTLSChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self
 }
 
 extension HBHTTPServer {
@@ -24,12 +29,15 @@ extension HBHTTPServer {
     /// - Parameters:
     ///   - handler: autoclosure generating handler
     @discardableResult public func addChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self {
-        childChannelHandlers.append(handler)
+        childChannelHandlers.addHandler(handler())
         return self
     }
 
+    /// Return all child channel handlers
+    /// - Parameter responder: <#responder description#>
+    /// - Returns: <#description#>
     public func getChildChannelHandlers(responder: HBHTTPResponder) -> [RemovableChannelHandler] {
-        return childChannelHandlers.map { $0()} + [
+        return childChannelHandlers.getHandlers() + [
             HBHTTPEncodeHandler(configuration: self.serverConfiguration),
             HBHTTPDecodeHandler(configuration: self.serverConfiguration),
             HBHTTPServerHandler(responder: responder),
