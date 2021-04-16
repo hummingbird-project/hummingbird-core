@@ -94,7 +94,7 @@ public class HBHTTPServer {
             #if os(iOS) || os(tvOS)
             responder.logger.warning("Running BSD sockets on iOS or tvOS is not recommended. Please use NIOTSEventLoopGroup, to run with the Network framework")
             #endif
-            if configuration.tlsOptions != nil {
+            if #available(macOS 10.14, iOS 12, tvOS 12, *), configuration.tlsOptions.options != nil {
                 responder.logger.warning("tlsOptions set in Configuration will not be applied to a BSD sockets server. Please use NIOTSEventLoopGroup, to run with the Network framework")
             }
             bootstrap = createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
@@ -192,7 +192,7 @@ public class HBHTTPServer {
                 return nil
             }
 
-        if let tlsOptions = configuration.tlsOptions {
+        if let tlsOptions = configuration.tlsOptions.options {
             return bootstrap.tlsOptions(tlsOptions)
         }
         return bootstrap
@@ -210,10 +210,35 @@ protocol HTTPServerBootstrap {
     func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
 }
 
+// Extend both `ServerBootstrap` and `NIOTSListenerBootstrap` to conform to `HTTPServerBootstrap`
 extension ServerBootstrap: HTTPServerBootstrap {}
 #if canImport(Network)
 @available(macOS 10.14, iOS 12, tvOS 12, *)
 extension NIOTSListenerBootstrap: HTTPServerBootstrap {}
+#endif
+
+#if canImport(Network)
+/// Wrapper for NIO transport services TLS options
+public enum TSTLSOptions {
+    @available(macOS 10.14, iOS 12, tvOS 12, *)
+    case some(NWProtocolTLS.Options)
+    case none
+
+    @available(macOS 10.14, iOS 12, tvOS 12, *)
+    init(_ options: NWProtocolTLS.Options?) {
+        if let options = options {
+            self = .some(options)
+        } else {
+            self = .none
+        }
+    }
+
+    @available(macOS 10.14, iOS 12, tvOS 12, *)
+    var options: NWProtocolTLS.Options? {
+        if case .some(let options) = self { return options }
+        return nil
+    }
+}
 #endif
 
 extension HBHTTPServer {
@@ -237,7 +262,7 @@ extension HBHTTPServer {
         public let withPipeliningAssistance: Bool
         #if canImport(Network)
         /// TLS options
-        public let tlsOptions: NWProtocolTLS.Options?
+        public let tlsOptions: TSTLSOptions
         #endif
 
         /// Initialize HTTP server configuration
@@ -268,7 +293,7 @@ extension HBHTTPServer {
             self.tcpNoDelay = tcpNoDelay
             self.withPipeliningAssistance = withPipeliningAssistance
             #if canImport(Network)
-            self.tlsOptions = nil
+            self.tlsOptions = .none
             #endif
         }
 
@@ -282,6 +307,7 @@ extension HBHTTPServer {
         ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
         ///   - tlsOptions: TLS options for when you are using NIOTransportServices
         #if canImport(Network)
+        @available(macOS 10.14, iOS 12, tvOS 12, *)
         public init(
             address: HBBindAddress = .hostname(),
             serverName: String? = nil,
@@ -299,7 +325,7 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = true
             self.withPipeliningAssistance = withPipeliningAssistance
-            self.tlsOptions = tlsOptions
+            self.tlsOptions = .init(tlsOptions)
         }
         #endif
     }
