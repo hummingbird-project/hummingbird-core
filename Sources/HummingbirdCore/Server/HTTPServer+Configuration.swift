@@ -114,7 +114,7 @@ extension HBHTTPServer {
             maxStreamingBufferSize: Int = 1 * 1024 * 1024,
             reuseAddress: Bool = true,
             withPipeliningAssistance: Bool = true,
-            tlsOptions: NWProtocolTLS.Options?
+            tlsOptions: TSTLSOptions
         ) {
             self.address = address
             self.serverName = serverName
@@ -124,7 +124,7 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = true
             self.withPipeliningAssistance = withPipeliningAssistance
-            self.tlsOptions = .init(tlsOptions)
+            self.tlsOptions = tlsOptions
         }
         #endif
     }
