@@ -92,8 +92,11 @@ public class HBHTTPServer {
             bootstrap = tsBootstrap
         } else {
             #if os(iOS) || os(tvOS)
-            responder.logger.warning("Running BSD sockets on iOS or tvOS is not recommended. Please use a NIOTSEventLoopGroup, to use the Network framework")
+            responder.logger.warning("Running BSD sockets on iOS or tvOS is not recommended. Please use NIOTSEventLoopGroup, to run with the Network framework")
             #endif
+            if configuration.tlsOptions != nil {
+                responder.logger.warning("tlsOptions set in Configuration will not be applied to a BSD sockets server. Please use NIOTSEventLoopGroup, to run with the Network framework")
+            }
             bootstrap = createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
         }
         #else
@@ -177,18 +180,22 @@ public class HBHTTPServer {
     /// create a NIOTransportServices bootstrap using Network.framework
     @available(macOS 10.14, iOS 12, tvOS 12, *)
     private func createTSBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap? {
-        return NIOTSListenerBootstrap(validatingGroup: self.eventLoopGroup)?
-            // Specify backlog and enable SO_REUSEADDR for the server itself
+        guard let bootstrap = NIOTSListenerBootstrap(validatingGroup: self.eventLoopGroup)?
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
-            .serverChannelInitializer { channel in
+            .serverChannelInitializer({ channel in
                 channel.pipeline.addHandler(quiesce.makeServerChannelHandler(channel: channel))
-            }
+            })
             // Set the handlers that are applied to the accepted Channels
             .childChannelInitializer(childChannelInitializer)
-
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
-            // .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true) else {
+                return nil
+            }
+
+        if let tlsOptions = configuration.tlsOptions {
+            return bootstrap.tlsOptions(tlsOptions)
+        }
+        return bootstrap
     }
     #endif
 
@@ -228,6 +235,10 @@ extension HBHTTPServer {
         public let tcpNoDelay: Bool
         /// Pipelining ensures that only one http request is processed at one time
         public let withPipeliningAssistance: Bool
+        #if canImport(Network)
+        /// TLS options
+        public let tlsOptions: NWProtocolTLS.Options?
+        #endif
 
         /// Initialize HTTP server configuration
         /// - Parameters:
@@ -256,6 +267,40 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = tcpNoDelay
             self.withPipeliningAssistance = withPipeliningAssistance
+            #if canImport(Network)
+            self.tlsOptions = nil
+            #endif
         }
+
+        /// Initialize HTTP server configuration
+        /// - Parameters:
+        ///   - address: Bind address for server
+        ///   - serverName: Server name to return in "server" header
+        ///   - maxUploadSize: Maximum upload size allowed
+        ///   - maxStreamingBufferSize: Maximum size of buffer for streaming request payloads
+        ///   - reuseAddress: Allows socket to be bound to an address that is already in use.
+        ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
+        ///   - tlsOptions: TLS options for when you are using NIOTransportServices
+        #if canImport(Network)
+        public init(
+            address: HBBindAddress = .hostname(),
+            serverName: String? = nil,
+            maxUploadSize: Int = 2 * 1024 * 1024,
+            maxStreamingBufferSize: Int = 1 * 1024 * 1024,
+            reuseAddress: Bool = true,
+            withPipeliningAssistance: Bool = true,
+            tlsOptions: NWProtocolTLS.Options?
+        ) {
+            self.address = address
+            self.serverName = serverName
+            self.maxUploadSize = maxUploadSize
+            self.maxStreamingBufferSize = maxStreamingBufferSize
+            self.backlog = 256
+            self.reuseAddress = reuseAddress
+            self.tcpNoDelay = true
+            self.withPipeliningAssistance = withPipeliningAssistance
+            self.tlsOptions = tlsOptions
+        }
+        #endif
     }
 }
