@@ -106,7 +106,6 @@ extension HBHTTPServer {
         ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
         ///   - tlsOptions: TLS options for when you are using NIOTransportServices
         #if canImport(Network)
-        @available(macOS 10.14, iOS 12, tvOS 12, *)
         public init(
             address: HBBindAddress = .hostname(),
             serverName: String? = nil,
