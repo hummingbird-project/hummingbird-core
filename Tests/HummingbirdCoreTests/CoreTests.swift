@@ -17,6 +17,7 @@ import HummingbirdCore
 import Logging
 import NIO
 import NIOHTTP1
+import NIOTransportServices
 import XCTest
 
 class HummingBirdCoreTests: XCTestCase {
@@ -24,7 +25,11 @@ class HummingBirdCoreTests: XCTestCase {
     static var httpClient: HTTPClient!
 
     override class func setUp() {
+        #if os(iOS)
+        self.eventLoopGroup = NIOTSEventLoopGroup()
+        #else
         self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        #endif
         self.httpClient = HTTPClient(eventLoopGroupProvider: .shared(self.eventLoopGroup))
     }
 

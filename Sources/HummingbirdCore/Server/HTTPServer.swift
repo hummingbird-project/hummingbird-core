@@ -15,6 +15,10 @@
 import NIO
 import NIOExtras
 import NIOHTTP1
+#if canImport(Network)
+import Network
+import NIOTransportServices
+#endif
 
 /// HTTP server class
 public class HBHTTPServer {
@@ -82,22 +86,19 @@ public class HBHTTPServer {
 
         let quiesce = ServerQuiescingHelper(group: self.eventLoopGroup)
         self.quiesce = quiesce
-
-        let bootstrap = ServerBootstrap(group: self.eventLoopGroup)
-            // Specify backlog and enable SO_REUSEADDR for the server itself
-            .serverChannelOption(ChannelOptions.backlog, value: numericCast(self.configuration.backlog))
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
-            .serverChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: self.configuration.tcpNoDelay ? 1 : 0)
-            .serverChannelInitializer { channel in
-                channel.pipeline.addHandler(quiesce.makeServerChannelHandler(channel: channel))
-            }
-            // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer(childChannelInitializer)
-
-            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
-            .childChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: self.configuration.tcpNoDelay ? 1 : 0)
-            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+        #if canImport(Network)
+        let bootstrap: HTTPServerBootstrap
+        if #available(macOS 10.14, iOS 12, tvOS 12, *), let tsBootstrap = createTSBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer) {
+            bootstrap = tsBootstrap
+        } else {
+            #if os(iOS) || os(tvOS)
+            responder.logger.warning("Running BSD sockets on iOS or tvOS is not recommended. Please use a NIOTSEventLoopGroup, to use the Network framework")
+            #endif
+            bootstrap = createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
+        }
+        #else
+        let bootstrap = createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
+        #endif
 
         let bindFuture: EventLoopFuture<Void>
         switch self.configuration.address {
@@ -153,10 +154,60 @@ public class HBHTTPServer {
         ]
     }
 
+    /// create a BSD sockets based bootstrap
+    private func createSocketsBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap {
+        return ServerBootstrap(group: self.eventLoopGroup)
+            // Specify backlog and enable SO_REUSEADDR for the server itself
+            .serverChannelOption(ChannelOptions.backlog, value: numericCast(self.configuration.backlog))
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
+            .serverChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: self.configuration.tcpNoDelay ? 1 : 0)
+            .serverChannelInitializer { channel in
+                channel.pipeline.addHandler(quiesce.makeServerChannelHandler(channel: channel))
+            }
+            // Set the handlers that are applied to the accepted Channels
+            .childChannelInitializer(childChannelInitializer)
+
+            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
+            .childChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: self.configuration.tcpNoDelay ? 1 : 0)
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+    }
+
+    #if canImport(Network)
+    /// create a NIOTransportServices bootstrap using Network.framework
+    @available(macOS 10.14, iOS 12, tvOS 12, *)
+    private func createTSBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap? {
+        return NIOTSListenerBootstrap(validatingGroup: self.eventLoopGroup)?
+            // Specify backlog and enable SO_REUSEADDR for the server itself
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
+            .serverChannelInitializer { channel in
+                channel.pipeline.addHandler(quiesce.makeServerChannelHandler(channel: channel))
+            }
+            // Set the handlers that are applied to the accepted Channels
+            .childChannelInitializer(childChannelInitializer)
+
+            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
+            // .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+    }
+    #endif
+
     /// list of child channel handlers
     private var childChannelHandlers: HBHTTPChannelHandlers
     private var tlsChannelHandler: (() -> RemovableChannelHandler)?
 }
+
+/// Protocol for bootstrap.
+protocol HTTPServerBootstrap {
+    func bind(host: String, port: Int) -> EventLoopFuture<Channel>
+    func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
+}
+
+extension ServerBootstrap: HTTPServerBootstrap {}
+#if canImport(Network)
+@available(macOS 10.14, iOS 12, tvOS 12, *)
+extension NIOTSListenerBootstrap: HTTPServerBootstrap {}
+#endif
 
 extension HBHTTPServer {
     /// HTTP server configuration
