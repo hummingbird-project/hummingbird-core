@@ -88,19 +88,19 @@ public class HBHTTPServer {
         self.quiesce = quiesce
         #if canImport(Network)
         let bootstrap: HTTPServerBootstrap
-        if #available(macOS 10.14, iOS 12, tvOS 12, *), let tsBootstrap = createTSBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer) {
+        if #available(macOS 10.14, iOS 12, tvOS 12, *), let tsBootstrap = self.createTSBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer) {
             bootstrap = tsBootstrap
         } else {
             #if os(iOS) || os(tvOS)
             responder.logger.warning("Running BSD sockets on iOS or tvOS is not recommended. Please use NIOTSEventLoopGroup, to run with the Network framework")
             #endif
-            if #available(macOS 10.14, iOS 12, tvOS 12, *), configuration.tlsOptions.options != nil {
+            if #available(macOS 10.14, iOS 12, tvOS 12, *), self.configuration.tlsOptions.options != nil {
                 responder.logger.warning("tlsOptions set in Configuration will not be applied to a BSD sockets server. Please use NIOTSEventLoopGroup, to run with the Network framework")
             }
-            bootstrap = createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
+            bootstrap = self.createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
         }
         #else
-        let bootstrap = createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
+        let bootstrap = self.createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
         #endif
 
         let bindFuture: EventLoopFuture<Void>
@@ -188,9 +188,10 @@ public class HBHTTPServer {
             // Set the handlers that are applied to the accepted Channels
             .childChannelInitializer(childChannelInitializer)
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true) else {
-                return nil
-            }
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+        else {
+            return nil
+        }
 
         if let tlsOptions = configuration.tlsOptions.options {
             return bootstrap.tlsOptions(tlsOptions)

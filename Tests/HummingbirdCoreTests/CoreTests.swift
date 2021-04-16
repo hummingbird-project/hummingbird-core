@@ -386,7 +386,6 @@ class HummingBirdCoreTests: XCTestCase {
             XCTAssertEqual(body.readString(length: body.readableBytes), "Hello")
         }
         XCTAssertNoThrow(try future.wait())
-
     }
     #endif
 
