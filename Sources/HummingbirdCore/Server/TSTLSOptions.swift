@@ -37,7 +37,7 @@ public struct TSTLSOptions {
     /// TSTLSOptions holding options
     @available(macOS 10.14, iOS 12, tvOS 12, *)
     public static func options(_ options: NWProtocolTLS.Options) -> Self {
-        return .init(.some(options))
+        return .init(value: .some(options))
     }
 
     @available(macOS 10.14, iOS 12, tvOS 12, *)
@@ -59,12 +59,12 @@ public struct TSTLSOptions {
         guard let secIdentity = sec_identity_create(identity) else { return nil }
         sec_protocol_options_set_local_identity(options.securityProtocolOptions, secIdentity)
 
-        return .init(.some(options))
+        return .init(value: .some(options))
     }
 
     /// Empty TSTLSOptions
     public static var none: Self {
-        return .init(.none)
+        return .init(value: .none)
     }
 
     @available(macOS 10.14, iOS 12, tvOS 12, *)
@@ -81,7 +81,7 @@ public struct TSTLSOptions {
     }
 
     private let value: Internal
-    private init(_ value: Internal) { self.value = value }
+    private init(value: Internal) { self.value = value }
 
     private static func loadP12(filename: String, password: String) -> SecIdentity? {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: filename)) else { return nil }
