@@ -74,14 +74,10 @@ public struct TSTLSOptions {
 
     @available(macOS 10.14, iOS 12, tvOS 12, *)
     public static func options(
-        serverIdentity: ServerIdentity,
-        trustRoots: [SecCertificate]? = nil,
-        certificateVerification: TSCertificateVerification = .none,
-        applicationProtocols: [String]? = nil,
-        minimumTLSVersion: tls_protocol_version_t = .TLSv10,
-        maximumTLSVersion: tls_protocol_version_t? = nil
+        serverIdentity: ServerIdentity
     ) -> Self? {
         let options = NWProtocolTLS.Options()
+        
         // server identity
         let identity: SecIdentity
         switch serverIdentity {
@@ -95,58 +91,6 @@ public struct TSTLSOptions {
         guard let secIdentity = sec_identity_create(identity) else { return nil }
         sec_protocol_options_set_local_identity(options.securityProtocolOptions, secIdentity)
 
-        // application protocols
-        applicationProtocols?.forEach {
-            sec_protocol_options_add_tls_application_protocol(options.securityProtocolOptions, $0)
-        }
-
-        // min TLS version
-        if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *) {
-            sec_protocol_options_set_min_tls_protocol_version(options.securityProtocolOptions, minimumTLSVersion)
-        } else {
-            sec_protocol_options_set_tls_min_version(options.securityProtocolOptions, minimumTLSVersion.sslProtocol)
-        }
-
-        // max TLS version
-        if let maximumTLSVersion = maximumTLSVersion {
-            if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *) {
-                sec_protocol_options_set_max_tls_protocol_version(options.securityProtocolOptions, maximumTLSVersion)
-            } else {
-                sec_protocol_options_set_tls_max_version(options.securityProtocolOptions, maximumTLSVersion.sslProtocol)
-            }
-        }
-
-        if certificateVerification != .fullVerification || trustRoots != nil {
-            // add verify block to control certificate verification
-            sec_protocol_options_set_verify_block(
-                options.securityProtocolOptions,
-                { sec_metadata, sec_trust, sec_protocol_verify_complete in
-                    guard certificateVerification != .none else {
-                        sec_protocol_verify_complete(true)
-                        return
-                    }
-
-                    let trust = sec_trust_copy_ref(sec_trust).takeRetainedValue()
-                    if let trustRootCertificates = trustRoots {
-                        SecTrustSetAnchorCertificates(trust, trustRootCertificates as CFArray)
-                    }
-                    if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *) {
-                        SecTrustEvaluateAsyncWithError(trust, Self.tlsDispatchQueue) { (trust, result, error) in
-                            sec_protocol_verify_complete(result)
-                        }
-                    } else {
-                        SecTrustEvaluateAsync(trust, Self.tlsDispatchQueue) { (trust, result) in
-                             switch result {
-                             case .proceed, .unspecified:
-                                sec_protocol_verify_complete(true)
-                             default:
-                                sec_protocol_verify_complete(false)
-                             }
-                        }
-                    }
-                }, Self.tlsDispatchQueue
-            )
-        }
         return .init(.some(options))
     }
 
@@ -180,9 +124,6 @@ public struct TSTLSOptions {
         let firstItem = items[0]
         return firstItem[kSecImportItemIdentity as String] as! SecIdentity?
     }
-
-    /// Dispatch queue used by Network framework TLS to control certificate verification
-    static private var tlsDispatchQueue = DispatchQueue(label: "TSTLSOptions")
 }
 #endif
 
