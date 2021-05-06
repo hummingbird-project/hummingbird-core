@@ -30,11 +30,7 @@ class TransportServicesTests: XCTestCase {
     static var httpClient: HTTPClient!
 
     override class func setUp() {
-        #if os(iOS)
-        self.eventLoopGroup = NIOTSEventLoopGroup()
-        #else
         self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        #endif
         self.httpClient = HTTPClient(eventLoopGroupProvider: .shared(self.eventLoopGroup))
     }
 
