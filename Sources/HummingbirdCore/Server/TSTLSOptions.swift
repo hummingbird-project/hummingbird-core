@@ -16,38 +16,6 @@
 import Foundation
 import Network
 
-extension tls_protocol_version_t {
-    var sslProtocol: SSLProtocol {
-        switch self {
-
-        case .TLSv10:
-            return .tlsProtocol1
-        case .TLSv11:
-            return .tlsProtocol11
-        case .TLSv12:
-            return .tlsProtocol12
-        case .TLSv13:
-            return .tlsProtocol13
-        case .DTLSv10:
-            return .dtlsProtocol1
-        case .DTLSv12:
-            return .dtlsProtocol12
-        @unknown default:
-            return .tlsProtocol1
-        }
-    }
-}
-
-/// Certificate verification modes.
-public enum TSCertificateVerification {
-    /// All certificate verification disabled.
-    case none
-
-    /// Certificates will be validated against the trust store and checked
-    /// against the hostname of the service we are contacting.
-    case fullVerification
-}
-
 /// Wrapper for NIO transport services TLS options
 public struct TSTLSOptions {
     @available(macOS 10.14, iOS 12, tvOS 12, *)
@@ -77,7 +45,7 @@ public struct TSTLSOptions {
         serverIdentity: ServerIdentity
     ) -> Self? {
         let options = NWProtocolTLS.Options()
-        
+
         // server identity
         let identity: SecIdentity
         switch serverIdentity {
@@ -115,15 +83,14 @@ public struct TSTLSOptions {
     private let value: Internal
     private init(_ value: Internal) { self.value = value }
 
-    static private func loadP12(filename: String, password: String) -> SecIdentity? {
+    private static func loadP12(filename: String, password: String) -> SecIdentity? {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: filename)) else { return nil }
         let options: [String: String] = [kSecImportExportPassphrase as String: password]
         var rawItems: CFArray?
         guard SecPKCS12Import(data as CFData, options as CFDictionary, &rawItems) == errSecSuccess else { return nil }
-        let items = rawItems! as! Array<Dictionary<String, Any>>
+        let items = rawItems! as! [[String: Any]]
         let firstItem = items[0]
         return firstItem[kSecImportItemIdentity as String] as! SecIdentity?
     }
 }
 #endif
-

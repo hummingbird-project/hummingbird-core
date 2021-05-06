@@ -17,11 +17,10 @@
 import AsyncHTTPClient
 import HummingbirdCore
 import Logging
+import Network
 import NIO
 import NIOHTTP1
 import NIOSSL
-import NIOTransportServices
-import Network
 import NIOTransportServices
 import XCTest
 

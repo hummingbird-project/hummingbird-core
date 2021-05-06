@@ -41,7 +41,9 @@ let package = Package(
             .product(name: "NIOSSL", package: "swift-nio-ssl"),
         ]),
         // test targets
-        .testTarget(name: "HummingbirdCoreTests", dependencies:
+        .testTarget(
+            name: "HummingbirdCoreTests",
+            dependencies:
             [
                 .byName(name: "HummingbirdCore"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
