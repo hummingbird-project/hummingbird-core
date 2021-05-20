@@ -6,10 +6,13 @@ import NIOSSL
 ///
 /// This is here to for testing purposes
 public class HBHTTPClientConnection {
-    let channelFuture: EventLoopFuture<Channel>
+    let channelPromise: EventLoopPromise<Channel>
     let eventLoopGroup: EventLoopGroup
     let eventLoopGroupProvider: NIOEventLoopGroupProvider
     let responseStream: EventLoopStream<HBHTTPClient.Response>
+    let host: String
+    let port: Int
+    let tlsConfiguration: TLSConfiguration?
 
     public init(host: String, port: Int, tlsConfiguration: TLSConfiguration? = nil, eventLoopGroupProvider: NIOEventLoopGroupProvider) {
         self.eventLoopGroupProvider = eventLoopGroupProvider
@@ -19,24 +22,31 @@ public class HBHTTPClientConnection {
         case .shared(let elg):
             self.eventLoopGroup = elg
         }
-        let responseStream = EventLoopStream<HBHTTPClient.Response>(on: self.eventLoopGroup.next())
-        self.responseStream = responseStream
+        self.channelPromise = eventLoopGroup.next().makePromise()
+        self.responseStream = EventLoopStream<HBHTTPClient.Response>(on: self.eventLoopGroup.next())
+        self.host = host
+        self.port = port
+        self.tlsConfiguration = tlsConfiguration
+    }
+
+    public func connect() {
         do {
-            self.channelFuture = try Self.getBootstrap(host: host, tlsConfiguration: tlsConfiguration, group: self.eventLoopGroup)
+            try getBootstrap()
                 .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
                 .channelInitializer { channel in
                     return channel.pipeline.addHTTPClientHandlers()
                         .flatMap {
                             let handlers: [ChannelHandler] = [
                                 HTTPClientRequestSerializer(),
-                                HTTPClientResponseHandler(stream: responseStream)
+                                HTTPClientResponseHandler(stream: self.responseStream)
                             ]
                             return channel.pipeline.addHandlers(handlers)
                         }
                 }
                 .connect(host: host, port: port)
+                .cascade(to: self.channelPromise)
         } catch {
-            self.channelFuture = eventLoopGroup.next().makeFailedFuture(HBHTTPClient.Error.tlsSetupFailed)
+            self.channelPromise.fail(HBHTTPClient.Error.tlsSetupFailed)
         }
     }
 
@@ -73,7 +83,7 @@ public class HBHTTPClientConnection {
     }
 
     public func execute(_ request: HBHTTPClient.Request) {
-        channelFuture.whenComplete { channel in
+        channelPromise.futureResult.whenComplete { channel in
             switch channel {
             case .success(let value):
                 value.writeAndFlush(request, promise: nil)
@@ -87,15 +97,15 @@ public class HBHTTPClientConnection {
         return responseStream.consume().unwrap(orError: HBHTTPClient.Error.noResponse)
     }
 
-    private static func getBootstrap(host: String, tlsConfiguration: TLSConfiguration?, group: EventLoopGroup) throws -> NIOClientTCPBootstrap {
+    private func getBootstrap() throws -> NIOClientTCPBootstrap {
         if let tlsConfiguration = tlsConfiguration {
             let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
             let tlsProvider = try NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: host)
-            let bootstrap = NIOClientTCPBootstrap(ClientBootstrap(group: group), tls: tlsProvider)
+            let bootstrap = NIOClientTCPBootstrap(ClientBootstrap(group: self.eventLoopGroup), tls: tlsProvider)
             bootstrap.enableTLS()
             return bootstrap
         } else {
-            return NIOClientTCPBootstrap(ClientBootstrap(group: group), tls: NIOInsecureNoTLS())
+            return NIOClientTCPBootstrap(ClientBootstrap(group: self.eventLoopGroup), tls: NIOInsecureNoTLS())
         }
     }
 

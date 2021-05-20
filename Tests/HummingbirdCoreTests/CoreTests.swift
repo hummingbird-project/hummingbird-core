@@ -59,6 +59,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
         
         client.get("/")
@@ -80,6 +81,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         client.get("/")
@@ -116,6 +118,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
@@ -155,6 +158,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 450_000)
@@ -192,6 +196,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
@@ -230,6 +235,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
@@ -277,6 +283,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
@@ -316,6 +323,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 32)
@@ -365,6 +373,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 16384)
@@ -399,6 +408,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 320_000)

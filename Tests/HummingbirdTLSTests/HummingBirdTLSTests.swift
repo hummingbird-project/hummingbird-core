@@ -52,6 +52,7 @@ class HummingBirdTLSTests: XCTestCase {
             tlsConfiguration: try self.getClientTLSConfiguration(),
             eventLoopGroupProvider: .createNew
         )
+        client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         client.get("/")
