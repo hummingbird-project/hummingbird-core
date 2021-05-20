@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Hummingbird server framework project
+//
+// Copyright (c) 2021-2021 the Hummingbird authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See hummingbird/CONTRIBUTORS.txt for the list of Hummingbird authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
 import NIO
 import NIOHTTP1
 import NIOSSL
@@ -22,7 +36,7 @@ public class HBHTTPClientConnection {
         case .shared(let elg):
             self.eventLoopGroup = elg
         }
-        self.channelPromise = eventLoopGroup.next().makePromise()
+        self.channelPromise = self.eventLoopGroup.next().makePromise()
         self.responseStream = EventLoopStream<HBHTTPClient.Response>(on: self.eventLoopGroup.next())
         self.host = host
         self.port = port
@@ -31,19 +45,19 @@ public class HBHTTPClientConnection {
 
     public func connect() {
         do {
-            try getBootstrap()
+            try self.getBootstrap()
                 .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
                 .channelInitializer { channel in
                     return channel.pipeline.addHTTPClientHandlers()
                         .flatMap {
                             let handlers: [ChannelHandler] = [
                                 HTTPClientRequestSerializer(),
-                                HTTPClientResponseHandler(stream: self.responseStream)
+                                HTTPClientResponseHandler(stream: self.responseStream),
                             ]
                             return channel.pipeline.addHandlers(handlers)
                         }
                 }
-                .connect(host: host, port: port)
+                .connect(host: self.host, port: self.port)
                 .cascade(to: self.channelPromise)
         } catch {
             self.channelPromise.fail(HBHTTPClient.Error.tlsSetupFailed)
@@ -51,7 +65,7 @@ public class HBHTTPClientConnection {
     }
 
     public func syncShutdown() throws {
-        try responseStream.syncShutdown()
+        try self.responseStream.syncShutdown()
         if case .createNew = self.eventLoopGroupProvider {
             try self.eventLoopGroup.syncShutdownGracefully()
         }
@@ -83,7 +97,7 @@ public class HBHTTPClientConnection {
     }
 
     public func execute(_ request: HBHTTPClient.Request) {
-        channelPromise.futureResult.whenComplete { channel in
+        self.channelPromise.futureResult.whenComplete { channel in
             switch channel {
             case .success(let value):
                 value.writeAndFlush(request, promise: nil)
@@ -94,7 +108,7 @@ public class HBHTTPClientConnection {
     }
 
     public func getResponse() -> EventLoopFuture<HBHTTPClient.Response> {
-        return responseStream.consume().unwrap(orError: HBHTTPClient.Error.noResponse)
+        return self.responseStream.consume().unwrap(orError: HBHTTPClient.Error.noResponse)
     }
 
     private func getBootstrap() throws -> NIOClientTCPBootstrap {

@@ -61,7 +61,7 @@ class HummingBirdCoreTests: XCTestCase {
         let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
         client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
-        
+
         client.get("/")
         let future = client.getResponse().flatMapThrowing { response in
             var body = try XCTUnwrap(response.body)

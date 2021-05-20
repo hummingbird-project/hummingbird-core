@@ -1,15 +1,21 @@
+//===----------------------------------------------------------------------===//
 //
-//  File.swift
-//  
+// This source file is part of the Hummingbird server framework project
 //
-//  Created by Adam Fowler on 20/05/2021.
+// Copyright (c) 2021-2021 the Hummingbird authors
+// Licensed under Apache License v2.0
 //
+// See LICENSE.txt for license information
+// See hummingbird/CONTRIBUTORS.txt for the list of Hummingbird authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
 
 import NIO
 
 /// Stream using a circular buffer of promises
 class EventLoopStream<Value> {
-
     /// Queue of promises for each Value fed to the streamer. Last entry is always waiting for the next buffer or end tag
     var queue: CircularBuffer<EventLoopPromise<Value?>>
     /// EventLoop everything is running on
