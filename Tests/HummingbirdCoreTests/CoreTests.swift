@@ -420,6 +420,74 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try future.wait())
     }
 
+    /// test a request is finished with before the next one starts to be processed
+    func testHTTPPipelining() throws {
+        struct WaitResponder: HBHTTPResponder {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                guard let wait = request.head.headers["wait"].first.map({ Int64($0) }) ?? nil else {
+                    onComplete(.failure(HBHTTPError(.badRequest)))
+                    return
+                }
+                context.eventLoop.scheduleTask(in: .milliseconds(wait)) {
+                    let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+                    let responseBody = context.channel.allocator.buffer(string: "\(wait)")
+                    let response = HBHTTPResponse(head: responseHead, body: .byteBuffer(responseBody))
+                    onComplete(.success(response))
+                }
+            }
+        }
+        let server = HBHTTPServer(
+            group: Self.eventLoopGroup,
+            configuration: .init(
+                address: .hostname(port: 8080),
+                withPipeliningAssistance: true // this defaults to true
+            )
+        )
+        XCTAssertNoThrow(try server.start(responder: WaitResponder()).wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
+        let waitTimes: [Int] = (0..<16).map { _ in Int.random(in: 0..<500) }
+        waitTimes.forEach {
+            client.get("/", headers: ["wait": String(describing: $0), "connection": "keep-alive"])
+        }
+        try waitTimes.forEach {
+            let response = try client.getResponse().wait()
+            XCTAssertEqual(response.body.map { String(buffer: $0) }, "\($0)")
+        }
+    }
+
+    func testConnectionClose() throws {
+        struct HelloResponder: HBHTTPResponder {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+                let responseBody = context.channel.allocator.buffer(string: "Hello")
+                let response = HBHTTPResponse(head: responseHead, body: .byteBuffer(responseBody))
+                onComplete(.success(response))
+            }
+        }
+        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 8080)))
+        XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
+        let timeoutPromise = TimeoutPromise(eventLoop: Self.eventLoopGroup.next(), timeout: .seconds(5))
+        client.get("/", headers: ["connection": "close"])
+        client.channelPromise.futureResult.whenSuccess { channel in
+            channel.closeFuture.whenSuccess { _ in
+                timeoutPromise.succeed()
+            }
+        }
+        XCTAssertNoThrow(try timeoutPromise.wait())
+    }
+
+    /// Test we can run with an embedded channel. HummingbirdXCT uses this quite a lot
     func testEmbeddedChannel() {
         enum HTTPError: Error {
             case noHead

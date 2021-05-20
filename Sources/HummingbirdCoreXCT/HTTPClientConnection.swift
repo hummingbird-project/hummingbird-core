@@ -6,7 +6,7 @@ import NIOSSL
 ///
 /// This is here to for testing purposes
 public class HBHTTPClientConnection {
-    let channelPromise: EventLoopPromise<Channel>
+    public let channelPromise: EventLoopPromise<Channel>
     let eventLoopGroup: EventLoopGroup
     let eventLoopGroupProvider: NIOEventLoopGroupProvider
     let responseStream: EventLoopStream<HBHTTPClient.Response>
@@ -57,13 +57,13 @@ public class HBHTTPClientConnection {
         }
     }
 
-    public func get(_ uri: String) {
-        let request = HBHTTPClient.Request(uri, method: .GET)
+    public func get(_ uri: String, headers: HTTPHeaders = [:]) {
+        let request = HBHTTPClient.Request(uri, method: .GET, headers: headers)
         self.execute(request)
     }
 
-    public func head(_ uri: String) {
-        let request = HBHTTPClient.Request(uri, method: .HEAD)
+    public func head(_ uri: String, headers: HTTPHeaders = [:]) {
+        let request = HBHTTPClient.Request(uri, method: .HEAD, headers: headers)
         self.execute(request)
     }
 
