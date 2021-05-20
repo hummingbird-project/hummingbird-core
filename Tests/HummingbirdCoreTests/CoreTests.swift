@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AsyncHTTPClient
 import HummingbirdCore
+import HummingbirdCoreXCT
 import Logging
 import NIO
 import NIOHTTP1
@@ -26,7 +26,6 @@ import XCTest
 
 class HummingBirdCoreTests: XCTestCase {
     static var eventLoopGroup: EventLoopGroup!
-    static var httpClient: HTTPClient!
 
     override class func setUp() {
         #if os(iOS)
@@ -34,11 +33,9 @@ class HummingBirdCoreTests: XCTestCase {
         #else
         self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         #endif
-        self.httpClient = HTTPClient(eventLoopGroupProvider: .shared(self.eventLoopGroup))
     }
 
     override class func tearDown() {
-        XCTAssertNoThrow(try self.httpClient.syncShutdown())
         XCTAssertNoThrow(try self.eventLoopGroup.syncShutdownGracefully())
     }
 
@@ -61,10 +58,11 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/"
-        )
-        let future = Self.httpClient.execute(request: request).flatMapThrowing { response in
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+        
+        client.get("/")
+        let future = client.getResponse().flatMapThrowing { response in
             var body = try XCTUnwrap(response.body)
             XCTAssertEqual(body.readString(length: body.readableBytes), "Hello")
         }
@@ -81,10 +79,11 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: ErrorResponder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/"
-        )
-        let future = Self.httpClient.execute(request: request).flatMapThrowing { response in
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
+        client.get("/")
+        let future = client.getResponse().flatMapThrowing { response in
             XCTAssertEqual(response.status, .unauthorized)
             XCTAssertEqual(response.headers["content-length"].first, "0")
         }
@@ -116,12 +115,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 1_140_000)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -155,12 +154,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 450_000)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 var body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body.readInteger(), buffer.readableBytes)
@@ -192,12 +191,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 1_140_000)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -230,12 +229,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 1_140_000)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -277,12 +276,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 1_140_000)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -316,12 +315,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 32)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 XCTAssertEqual(response.status, .insufficientStorage)
             }
@@ -365,12 +364,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 16384)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 XCTAssertEqual(response.status, .accepted)
             }
@@ -399,12 +398,12 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: Responder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        let client = HBHTTPClientConnection(host: "localhost", port: server.configuration.address.port!, eventLoopGroupProvider: .createNew)
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
         let buffer = self.randomBuffer(size: 320_000)
-        let request = try! HTTPClient.Request(
-            url: "http://localhost:\(server.configuration.address.port!)/",
-            body: .byteBuffer(buffer)
-        )
-        let future = Self.httpClient.execute(request: request)
+        client.post("/", body: buffer)
+        let future = client.getResponse()
             .flatMapThrowing { response in
                 XCTAssertEqual(response.status, .payloadTooLarge)
             }
