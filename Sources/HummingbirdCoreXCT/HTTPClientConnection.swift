@@ -53,6 +53,7 @@ public class HBHTTPClientConnection {
                             let handlers: [ChannelHandler] = [
                                 HTTPClientRequestSerializer(),
                                 HTTPClientResponseHandler(stream: self.responseStream),
+                                HTTPTaskHandler(),
                             ]
                             return channel.pipeline.addHandlers(handlers)
                         }
@@ -71,39 +72,37 @@ public class HBHTTPClientConnection {
         }
     }
 
-    public func get(_ uri: String, headers: HTTPHeaders = [:]) {
+    public func get(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .GET, headers: headers)
-        self.execute(request)
+        return self.execute(request)
     }
 
-    public func head(_ uri: String, headers: HTTPHeaders = [:]) {
+    public func head(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .HEAD, headers: headers)
-        self.execute(request)
+        return self.execute(request)
     }
 
-    public func put(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) {
+    public func put(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .PUT, headers: headers, body: body)
-        self.execute(request)
+        return self.execute(request)
     }
 
-    public func post(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) {
+    public func post(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .POST, headers: headers, body: body)
-        self.execute(request)
+        return self.execute(request)
     }
 
-    public func delete(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) {
+    public func delete(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .DELETE, headers: headers, body: body)
-        self.execute(request)
+        return self.execute(request)
     }
 
-    public func execute(_ request: HBHTTPClient.Request) {
-        self.channelPromise.futureResult.whenComplete { channel in
-            switch channel {
-            case .success(let value):
-                value.writeAndFlush(request, promise: nil)
-            case .failure(let error):
-                self.responseStream.error(error)
-            }
+    public func execute(_ request: HBHTTPClient.Request) -> EventLoopFuture<HBHTTPClient.Response> {
+        self.channelPromise.futureResult.flatMap { channel in
+            let promise = self.eventLoopGroup.next().makePromise(of: HBHTTPClient.Response.self)
+            let task = HTTPTask(request: request, responsePromise: promise)
+            channel.writeAndFlush(task, promise: nil)
+            return promise.futureResult
         }
     }
 
@@ -148,7 +147,7 @@ public class HBHTTPClientConnection {
     /// Channel Handler for parsing response from server
     private class HTTPClientResponseHandler: ChannelInboundHandler {
         typealias InboundIn = HTTPClientResponsePart
-        typealias OutboundOut = HBHTTPClient.Response
+        typealias InboundOut = HBHTTPClient.Response
 
         private enum ResponseState {
             /// Waiting to parse the next response.
@@ -188,7 +187,7 @@ public class HBHTTPClientConnection {
                     body: body
                 )
                 if context.channel.isActive {
-                    context.fireChannelRead(wrapOutboundOut(response))
+                    context.fireChannelRead(wrapInboundOut(response))
                 }
                 self.responseStream.feed(response)
                 self.state = .idle
@@ -200,12 +199,42 @@ public class HBHTTPClientConnection {
                     body: nil
                 )
                 if context.channel.isActive {
-                    context.fireChannelRead(wrapOutboundOut(response))
+                    context.fireChannelRead(wrapInboundOut(response))
                 }
                 self.responseStream.feed(response)
                 self.state = .idle
             default:
                 self.responseStream.error(HBHTTPClient.Error.malformedResponse)
+            }
+        }
+    }
+    
+    private struct HTTPTask {
+        let request: HBHTTPClient.Request
+        let responsePromise: EventLoopPromise<HBHTTPClient.Response>
+    }
+    
+    private class HTTPTaskHandler: ChannelDuplexHandler {
+        typealias InboundIn = HBHTTPClient.Response
+        typealias OutboundIn = HTTPTask
+        typealias OutboundOut = HBHTTPClient.Request
+
+        var queue: CircularBuffer<HTTPTask>
+        
+        init() {
+            self.queue = .init(initialCapacity: 4)
+        }
+        
+        func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+            let task = unwrapOutboundIn(data)
+            self.queue.append(task)
+            context.write(wrapOutboundOut(task.request), promise: promise)
+        }
+
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            let response = unwrapInboundIn(data)
+            if let task = self.queue.popFirst() {
+                task.responsePromise.succeed(response)
             }
         }
     }
