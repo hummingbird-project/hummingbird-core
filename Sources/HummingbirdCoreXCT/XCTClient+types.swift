@@ -17,7 +17,7 @@ import NIO
 import NIOHTTP1
 
 /// HTTP client types
-public enum HBHTTPClient {
+extension HBXCTClient {
     public enum Error: Swift.Error {
         case invalidURL
         case malformedResponse

@@ -19,7 +19,7 @@ import NIOSSL
 /// Bare bones HTTP client that connects to one Server.
 ///
 /// This is here for testing purposes
-public class HBHTTPClientConnection {
+public class HBXCTClient {
     public let channelPromise: EventLoopPromise<Channel>
     let eventLoopGroup: EventLoopGroup
     let eventLoopGroupProvider: NIOEventLoopGroupProvider
@@ -27,7 +27,11 @@ public class HBHTTPClientConnection {
     let port: Int
     let tlsConfiguration: TLSConfiguration?
 
-    /// Initialize HBHTTPClientConnection
+    public struct Configuration {
+        let tlsConfiguration: TLSConfiguration?
+    }
+
+    /// Initialize HBXCTClient
     /// - Parameters:
     ///   - host: host to connect
     ///   - port: port to connect to
@@ -71,7 +75,7 @@ public class HBHTTPClientConnection {
                 .connect(host: self.host, port: self.port)
                 .cascade(to: self.channelPromise)
         } catch {
-            self.channelPromise.fail(HBHTTPClient.Error.tlsSetupFailed)
+            self.channelPromise.fail(HBXCTClient.Error.tlsSetupFailed)
         }
     }
 
@@ -83,39 +87,39 @@ public class HBHTTPClientConnection {
     }
 
     /// GET request
-    public func get(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBHTTPClient.Response> {
-        let request = HBHTTPClient.Request(uri, method: .GET, headers: headers)
+    public func get(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBXCTClient.Response> {
+        let request = HBXCTClient.Request(uri, method: .GET, headers: headers)
         return self.execute(request)
     }
 
     /// HEAD request
-    public func head(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBHTTPClient.Response> {
-        let request = HBHTTPClient.Request(uri, method: .HEAD, headers: headers)
+    public func head(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBXCTClient.Response> {
+        let request = HBXCTClient.Request(uri, method: .HEAD, headers: headers)
         return self.execute(request)
     }
 
     /// PUT request
-    public func put(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
-        let request = HBHTTPClient.Request(uri, method: .PUT, headers: headers, body: body)
+    public func put(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBXCTClient.Response> {
+        let request = HBXCTClient.Request(uri, method: .PUT, headers: headers, body: body)
         return self.execute(request)
     }
 
     /// POST request
-    public func post(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
-        let request = HBHTTPClient.Request(uri, method: .POST, headers: headers, body: body)
+    public func post(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBXCTClient.Response> {
+        let request = HBXCTClient.Request(uri, method: .POST, headers: headers, body: body)
         return self.execute(request)
     }
 
     /// DELETE request
-    public func delete(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
-        let request = HBHTTPClient.Request(uri, method: .DELETE, headers: headers, body: body)
+    public func delete(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBXCTClient.Response> {
+        let request = HBXCTClient.Request(uri, method: .DELETE, headers: headers, body: body)
         return self.execute(request)
     }
 
     /// Execute request to server. Return `EventLoopFuture` that will be fulfilled with HTTP response
-    public func execute(_ request: HBHTTPClient.Request) -> EventLoopFuture<HBHTTPClient.Response> {
+    public func execute(_ request: HBXCTClient.Request) -> EventLoopFuture<HBXCTClient.Response> {
         self.channelPromise.futureResult.flatMap { channel in
-            let promise = self.eventLoopGroup.next().makePromise(of: HBHTTPClient.Response.self)
+            let promise = self.eventLoopGroup.next().makePromise(of: HBXCTClient.Response.self)
             let task = HTTPTask(request: request, responsePromise: promise)
             channel.writeAndFlush(task, promise: nil)
             return promise.futureResult
@@ -136,7 +140,7 @@ public class HBHTTPClientConnection {
 
     /// Channel Handler for serializing request header and data
     private class HTTPClientRequestSerializer: ChannelOutboundHandler {
-        typealias OutboundIn = HBHTTPClient.Request
+        typealias OutboundIn = HBXCTClient.Request
         typealias OutboundOut = HTTPClientRequestPart
 
         func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -159,7 +163,7 @@ public class HBHTTPClientConnection {
     /// Channel Handler for parsing response from server
     private class HTTPClientResponseHandler: ChannelInboundHandler {
         typealias InboundIn = HTTPClientResponsePart
-        typealias InboundOut = HBHTTPClient.Response
+        typealias InboundOut = HBXCTClient.Response
 
         private enum ResponseState {
             /// Waiting to parse the next response.
@@ -184,7 +188,7 @@ public class HBHTTPClientConnection {
                 self.state = .body(head, body)
             case (.end(let tailHeaders), .body(let head, let body)):
                 assert(tailHeaders == nil, "Unexpected tail headers")
-                let response = HBHTTPClient.Response(
+                let response = HBXCTClient.Response(
                     headers: head.headers,
                     status: head.status,
                     body: body
@@ -195,7 +199,7 @@ public class HBHTTPClientConnection {
                 self.state = .idle
             case (.end(let tailHeaders), .head(let head)):
                 assert(tailHeaders == nil, "Unexpected tail headers")
-                let response = HBHTTPClient.Response(
+                let response = HBXCTClient.Response(
                     headers: head.headers,
                     status: head.status,
                     body: nil
@@ -205,22 +209,22 @@ public class HBHTTPClientConnection {
                 }
                 self.state = .idle
             default:
-                context.fireErrorCaught(HBHTTPClient.Error.malformedResponse)
+                context.fireErrorCaught(HBXCTClient.Error.malformedResponse)
             }
         }
     }
 
     /// HTTP Task structure
     private struct HTTPTask {
-        let request: HBHTTPClient.Request
-        let responsePromise: EventLoopPromise<HBHTTPClient.Response>
+        let request: HBXCTClient.Request
+        let responsePromise: EventLoopPromise<HBXCTClient.Response>
     }
 
     /// HTTP Task handler. Kicks off HTTP Request and fulfills Response promise when response is returned
     private class HTTPTaskHandler: ChannelDuplexHandler {
-        typealias InboundIn = HBHTTPClient.Response
+        typealias InboundIn = HBXCTClient.Response
         typealias OutboundIn = HTTPTask
-        typealias OutboundOut = HBHTTPClient.Request
+        typealias OutboundOut = HBXCTClient.Request
 
         var queue: CircularBuffer<HTTPTask>
 
