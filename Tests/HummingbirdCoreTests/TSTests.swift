@@ -81,8 +81,7 @@ class TransportServicesTests: XCTestCase {
         client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
-        client.get("/")
-        let future = client.getResponse().flatMapThrowing { response in
+        let future = client.get("/").flatMapThrowing { response in
             var body = try XCTUnwrap(response.body)
             XCTAssertEqual(body.readString(length: body.readableBytes), "Hello")
         }

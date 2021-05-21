@@ -83,8 +83,7 @@ class HummingBirdCoreTests: XCTestCase {
         client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
-        client.get("/")
-        let future = client.getResponse().flatMapThrowing { response in
+        let future = client.get("/").flatMapThrowing { response in
             XCTAssertEqual(response.status, .unauthorized)
             XCTAssertEqual(response.headers["content-length"].first, "0")
         }
@@ -121,8 +120,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -161,8 +159,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 450_000)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 var body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body.readInteger(), buffer.readableBytes)
@@ -199,8 +196,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -238,8 +234,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -286,8 +281,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 1_140_000)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(body, buffer)
@@ -326,8 +320,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 32)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 XCTAssertEqual(response.status, .insufficientStorage)
             }
@@ -376,8 +369,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 16384)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 XCTAssertEqual(response.status, .accepted)
             }
@@ -411,8 +403,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let buffer = self.randomBuffer(size: 320_000)
-        client.post("/", body: buffer)
-        let future = client.getResponse()
+        let future = client.post("/", body: buffer)
             .flatMapThrowing { response in
                 XCTAssertEqual(response.status, .payloadTooLarge)
             }
@@ -450,15 +441,16 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let waitTimes: [Int] = (0..<16).map { _ in Int.random(in: 0..<500) }
-        waitTimes.forEach {
-            client.get("/", headers: ["wait": String(describing: $0), "connection": "keep-alive"])
+        let futures: [EventLoopFuture<Void>] = waitTimes.map { time in
+            return client.get("/", headers: ["wait": String(describing: time), "connection": "keep-alive"])
+                .map { response in
+                    XCTAssertEqual(response.body.map { String(buffer: $0) }, "\(time)")
+                }
         }
-        try waitTimes.forEach {
-            let response = try client.getResponse().wait()
-            XCTAssertEqual(response.body.map { String(buffer: $0) }, "\($0)")
-        }
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(futures, on: server.eventLoopGroup.next()).wait())
     }
 
+    /// test server closes connection if "connection" header is set to "close"
     func testConnectionClose() throws {
         struct HelloResponder: HBHTTPResponder {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
@@ -477,7 +469,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
         let timeoutPromise = TimeoutPromise(eventLoop: Self.eventLoopGroup.next(), timeout: .seconds(5))
-        client.get("/", headers: ["connection": "close"])
+        _ = client.get("/", headers: ["connection": "close"])
         client.channelPromise.futureResult.whenSuccess { channel in
             channel.closeFuture.whenSuccess { _ in
                 timeoutPromise.succeed()

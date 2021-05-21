@@ -23,7 +23,6 @@ public class HBHTTPClientConnection {
     public let channelPromise: EventLoopPromise<Channel>
     let eventLoopGroup: EventLoopGroup
     let eventLoopGroupProvider: NIOEventLoopGroupProvider
-    let responseStream: EventLoopStream<HBHTTPClient.Response>
     let host: String
     let port: Int
     let tlsConfiguration: TLSConfiguration?
@@ -37,7 +36,6 @@ public class HBHTTPClientConnection {
             self.eventLoopGroup = elg
         }
         self.channelPromise = self.eventLoopGroup.next().makePromise()
-        self.responseStream = EventLoopStream<HBHTTPClient.Response>(on: self.eventLoopGroup.next())
         self.host = host
         self.port = port
         self.tlsConfiguration = tlsConfiguration
@@ -52,7 +50,7 @@ public class HBHTTPClientConnection {
                         .flatMap {
                             let handlers: [ChannelHandler] = [
                                 HTTPClientRequestSerializer(),
-                                HTTPClientResponseHandler(stream: self.responseStream),
+                                HTTPClientResponseHandler(),
                                 HTTPTaskHandler(),
                             ]
                             return channel.pipeline.addHandlers(handlers)
@@ -66,7 +64,6 @@ public class HBHTTPClientConnection {
     }
 
     public func syncShutdown() throws {
-        try self.responseStream.syncShutdown()
         if case .createNew = self.eventLoopGroupProvider {
             try self.eventLoopGroup.syncShutdownGracefully()
         }
@@ -104,10 +101,6 @@ public class HBHTTPClientConnection {
             channel.writeAndFlush(task, promise: nil)
             return promise.futureResult
         }
-    }
-
-    public func getResponse() -> EventLoopFuture<HBHTTPClient.Response> {
-        return self.responseStream.consume().unwrap(orError: HBHTTPClient.Error.noResponse)
     }
 
     private func getBootstrap() throws -> NIOClientTCPBootstrap {
@@ -159,15 +152,6 @@ public class HBHTTPClientConnection {
         }
 
         private var state: ResponseState = .idle
-        private let responseStream: EventLoopStream<HBHTTPClient.Response>
-
-        init(stream: EventLoopStream<HBHTTPClient.Response>) {
-            self.responseStream = stream
-        }
-
-        func errorCaught(context: ChannelHandlerContext, error: Error) {
-            context.fireErrorCaught(error)
-        }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let part = unwrapInboundIn(data)
@@ -189,7 +173,6 @@ public class HBHTTPClientConnection {
                 if context.channel.isActive {
                     context.fireChannelRead(wrapInboundOut(response))
                 }
-                self.responseStream.feed(response)
                 self.state = .idle
             case (.end(let tailHeaders), .head(let head)):
                 assert(tailHeaders == nil, "Unexpected tail headers")
@@ -201,10 +184,9 @@ public class HBHTTPClientConnection {
                 if context.channel.isActive {
                     context.fireChannelRead(wrapInboundOut(response))
                 }
-                self.responseStream.feed(response)
                 self.state = .idle
             default:
-                self.responseStream.error(HBHTTPClient.Error.malformedResponse)
+                context.fireErrorCaught(HBHTTPClient.Error.malformedResponse)
             }
         }
     }
@@ -235,6 +217,12 @@ public class HBHTTPClientConnection {
             let response = unwrapInboundIn(data)
             if let task = self.queue.popFirst() {
                 task.responsePromise.succeed(response)
+            }
+        }
+
+        func errorCaught(context: ChannelHandlerContext, error: Error) {
+            if let task = self.queue.popFirst() {
+                task.responsePromise.fail(error)
             }
         }
     }
