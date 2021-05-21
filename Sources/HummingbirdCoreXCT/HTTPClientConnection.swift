@@ -18,7 +18,7 @@ import NIOSSL
 
 /// Bare bones HTTP client that connects to one Server.
 ///
-/// This is here to for testing purposes
+/// This is here for testing purposes
 public class HBHTTPClientConnection {
     public let channelPromise: EventLoopPromise<Channel>
     let eventLoopGroup: EventLoopGroup
@@ -27,7 +27,18 @@ public class HBHTTPClientConnection {
     let port: Int
     let tlsConfiguration: TLSConfiguration?
 
-    public init(host: String, port: Int, tlsConfiguration: TLSConfiguration? = nil, eventLoopGroupProvider: NIOEventLoopGroupProvider) {
+    /// Initialize HBHTTPClientConnection
+    /// - Parameters:
+    ///   - host: host to connect
+    ///   - port: port to connect to
+    ///   - tlsConfiguration: TLS configuration if required
+    ///   - eventLoopGroupProvider: EventLoopGroup to use
+    public init(
+        host: String,
+        port: Int,
+        tlsConfiguration: TLSConfiguration? = nil,
+        eventLoopGroupProvider: NIOEventLoopGroupProvider
+    ) {
         self.eventLoopGroupProvider = eventLoopGroupProvider
         switch eventLoopGroupProvider {
         case .createNew:
@@ -41,6 +52,7 @@ public class HBHTTPClientConnection {
         self.tlsConfiguration = tlsConfiguration
     }
 
+    /// connect to HTTP server
     public func connect() {
         do {
             try self.getBootstrap()
@@ -63,37 +75,44 @@ public class HBHTTPClientConnection {
         }
     }
 
+    /// shutdown client
     public func syncShutdown() throws {
         if case .createNew = self.eventLoopGroupProvider {
             try self.eventLoopGroup.syncShutdownGracefully()
         }
     }
 
+    /// GET request
     public func get(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .GET, headers: headers)
         return self.execute(request)
     }
 
+    /// HEAD request
     public func head(_ uri: String, headers: HTTPHeaders = [:]) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .HEAD, headers: headers)
         return self.execute(request)
     }
 
+    /// PUT request
     public func put(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .PUT, headers: headers, body: body)
         return self.execute(request)
     }
 
+    /// POST request
     public func post(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .POST, headers: headers, body: body)
         return self.execute(request)
     }
 
+    /// DELETE request
     public func delete(_ uri: String, headers: HTTPHeaders = [:], body: ByteBuffer) -> EventLoopFuture<HBHTTPClient.Response> {
         let request = HBHTTPClient.Request(uri, method: .DELETE, headers: headers, body: body)
         return self.execute(request)
     }
 
+    /// Execute request to server. Return `EventLoopFuture` that will be fulfilled with HTTP response
     public func execute(_ request: HBHTTPClient.Request) -> EventLoopFuture<HBHTTPClient.Response> {
         self.channelPromise.futureResult.flatMap { channel in
             let promise = self.eventLoopGroup.next().makePromise(of: HBHTTPClient.Response.self)
@@ -190,23 +209,25 @@ public class HBHTTPClientConnection {
             }
         }
     }
-    
+
+    /// HTTP Task structure
     private struct HTTPTask {
         let request: HBHTTPClient.Request
         let responsePromise: EventLoopPromise<HBHTTPClient.Response>
     }
-    
+
+    /// HTTP Task handler. Kicks off HTTP Request and fulfills Response promise when response is returned
     private class HTTPTaskHandler: ChannelDuplexHandler {
         typealias InboundIn = HBHTTPClient.Response
         typealias OutboundIn = HTTPTask
         typealias OutboundOut = HBHTTPClient.Request
 
         var queue: CircularBuffer<HTTPTask>
-        
+
         init() {
             self.queue = .init(initialCapacity: 4)
         }
-        
+
         func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             let task = unwrapOutboundIn(data)
             self.queue.append(task)
@@ -221,9 +242,11 @@ public class HBHTTPClientConnection {
         }
 
         func errorCaught(context: ChannelHandlerContext, error: Error) {
-            if let task = self.queue.popFirst() {
+            // if error caught, pass to all tasks in progress and close channel
+            while let task = self.queue.popFirst() {
                 task.responsePromise.fail(error)
             }
+            context.close(promise: nil)
         }
     }
 }

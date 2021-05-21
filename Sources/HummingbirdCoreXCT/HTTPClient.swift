@@ -37,19 +37,6 @@ public enum HBHTTPClient {
             self.headers = headers
             self.body = body
         }
-
-        /* func clean() throws -> Request {
-             guard let host = uri.host else { throw Error.invalidURL }
-             var headers = self.headers
-             headers.replaceOrAdd(name: "Host", value: String(host))
-             headers.add(name: "User-Agent", value: "HummingBird/0.1")
-             if let body = body {
-                 headers.replaceOrAdd(name: "Content-Length", value: body.readableBytes.description)
-             }
-             headers.replaceOrAdd(name: "Connection", value: "Close")
-
-             return .init(uri: self.uri, method: self.method, headers: headers, body: self.body)
-         } */
     }
 
     public struct Response {
