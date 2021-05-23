@@ -27,6 +27,7 @@ public class HBXCTClient {
     let port: Int
     let configuration: Configuration
 
+    /// HBXCT configuration
     public struct Configuration {
         public init(
             tlsConfiguration: TLSConfiguration? = nil,
@@ -35,8 +36,11 @@ public class HBXCTClient {
             self.tlsConfiguration = tlsConfiguration
             self.timeout = timeout
         }
-        let tlsConfiguration: TLSConfiguration?
-        let timeout: TimeAmount
+
+        /// TLS confguration
+        public let tlsConfiguration: TLSConfiguration?
+        /// read timeout. If connection has no read events for indicated time throw timeout error
+        public let timeout: TimeAmount
     }
 
     /// Initialize HBXCTClient
