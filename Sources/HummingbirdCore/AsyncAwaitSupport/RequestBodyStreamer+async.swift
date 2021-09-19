@@ -14,8 +14,8 @@
 
 #if compiler(>=5.5)
 
-import NIOCore
 import _NIOConcurrency
+import NIOCore
 
 @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 extension HBStreamerProtocol {
@@ -28,7 +28,6 @@ extension HBRequestBodyStreamer {
         return try await self.eventLoop.flatSubmit {
             self.consume()
         }.get()
-
     }
 }
 
@@ -53,7 +52,7 @@ public struct HBRequestBodyStreamerSequence: AsyncSequence {
 
     public struct AsyncIterator: AsyncIteratorProtocol {
         let streamer: HBStreamerProtocol
-        
+
         public func next() async throws -> ByteBuffer? {
             let output = try await self.streamer.consume()
             switch output {

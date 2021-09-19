@@ -46,7 +46,7 @@ final class HummingBirdCoreAsyncTests: XCTestCase {
         struct Responder: HBHTTPResponder {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 let allocator = context.channel.allocator
-                Task { 
+                Task {
                     var responseBuffer = allocator.buffer(capacity: 0)
                     for try await buffer in request.body.stream!.sequence {
                         var buffer = buffer
@@ -76,7 +76,6 @@ final class HummingBirdCoreAsyncTests: XCTestCase {
             }
         XCTAssertNoThrow(try future.wait())
     }
-
 }
 
 #endif // compiler(>=5.5)
