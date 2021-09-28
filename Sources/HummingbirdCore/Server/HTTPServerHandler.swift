@@ -22,13 +22,15 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
     typealias OutboundOut = HTTPServerResponsePart
 
     let responder: HBHTTPResponder
+    let configuration: HBHTTPServer.Configuration
 
     var requestsInProgress: Int
     var closeAfterResponseWritten: Bool
     var propagatedError: Error?
 
-    init(responder: HBHTTPResponder) {
+    init(responder: HBHTTPResponder, configuration: HBHTTPServer.Configuration) {
         self.responder = responder
+        self.configuration = configuration
         self.requestsInProgress = 0
         self.closeAfterResponseWritten = false
         self.propagatedError = nil
@@ -130,9 +132,9 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
             head.headers.replaceOrAdd(name: "content-length", value: buffer.readableBytes.description)
         }
         // server name
-        /*if let serverName = self.serverName {
+        if let serverName = self.configuration.serverName {
             head.headers.add(name: "server", value: serverName)
-        }*/
+        }
         context.write(self.wrapOutboundOut(.head(head)), promise: nil)
         switch response.body {
         case .byteBuffer(let buffer):

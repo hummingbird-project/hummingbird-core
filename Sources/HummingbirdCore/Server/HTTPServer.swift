@@ -154,7 +154,7 @@ public class HBHTTPServer {
         return self.childChannelHandlers.getHandlers() + [
             //HBHTTPEncodeHandler(configuration: self.configuration),
             HBHTTPDecodeHandler(configuration: self.configuration),
-            HBHTTPServerHandler(responder: responder),
+            HBHTTPServerHandler(responder: responder, configuration: self.configuration),
         ]
     }
 
