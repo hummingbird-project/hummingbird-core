@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
 import Logging
 import NIOCore
 import NIOHTTP1
-import Dispatch
 
 /// Channel handler for responding to a request and returning a response
 ///
@@ -77,7 +77,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             streamer.feed(.byteBuffer(buffer))
             streamer.feed(.byteBuffer(part))
             self.state = .streamingBody(streamer)
-            readRequest(context: context, request: request)
+            self.readRequest(context: context, request: request)
 
         case (.body(let part), .streamingBody(let streamer)):
             streamer.feed(.byteBuffer(part))
@@ -150,7 +150,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     }
 
     func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, request: HBHTTPRequest, keepAlive: Bool) {
-        writeHTTPParts(context: context, response: response).whenComplete { result in
+        self.writeHTTPParts(context: context, response: response).whenComplete { result in
             var keepAlive = keepAlive
             if case .failure = result {
                 keepAlive = false
@@ -217,7 +217,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
         }
     }
-    
+
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let evt as ChannelEvent where evt == ChannelEvent.inputClosed:
@@ -290,4 +290,3 @@ extension EventLoopFuture {
         return next.futureResult
     }
 }
-
