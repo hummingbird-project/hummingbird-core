@@ -19,7 +19,7 @@ import NIOHTTP1
 /// Channel handler for responding to a request and returning a response
 final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = HBHTTPRequest
-    typealias OutboundOut = HBHTTPResponse
+    typealias OutboundOut = HTTPServerResponsePart
 
     let responder: HBHTTPResponder
 
@@ -84,7 +84,10 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
     }
 
     func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, request: HBHTTPRequest, keepAlive: Bool) {
-        context.write(self.wrapOutboundOut(response)).whenComplete { _ in
+        let promise = context.eventLoop.makePromise(of: Void.self)
+        writeParts(context: context, response: response, promise: promise)
+        promise.futureResult.whenComplete { _ in
+//        context.write(self.wrapOutboundOut(response)).whenComplete { _ in
             // once we have finished writing the response we can drop the request body
             // if we are streaming we need to wait until the request has finished streaming
             if case .stream(let streamer) = request.body {
@@ -120,6 +123,40 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         }
     }
 
+    func writeParts(context: ChannelHandlerContext, response: HBHTTPResponse, promise: EventLoopPromise<Void>?) {
+        // add content-length header
+        var head = response.head
+        if case .byteBuffer(let buffer) = response.body {
+            head.headers.replaceOrAdd(name: "content-length", value: buffer.readableBytes.description)
+        }
+        // server name
+        /*if let serverName = self.serverName {
+            head.headers.add(name: "server", value: serverName)
+        }*/
+        context.write(self.wrapOutboundOut(.head(head)), promise: nil)
+        switch response.body {
+        case .byteBuffer(let buffer):
+            context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+        case .stream(let streamer):
+            streamer.write(on: context.eventLoop) { buffer in
+                context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+            }
+            .whenComplete { result in
+                switch result {
+                case .failure:
+                    // not sure what do write when result is an error, sending .end and closing channel for the moment
+                    context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+                    context.close(promise: nil)
+                case .success:
+                    context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+                }
+            }
+        case .empty:
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+        }
+    }
+    
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let evt as ChannelEvent where evt == ChannelEvent.inputClosed:

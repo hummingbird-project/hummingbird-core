@@ -152,7 +152,7 @@ public class HBHTTPServer {
     /// - Parameter responder: final responder to user
     public func getChildChannelHandlers(responder: HBHTTPResponder) -> [RemovableChannelHandler] {
         return self.childChannelHandlers.getHandlers() + [
-            HBHTTPEncodeHandler(configuration: self.configuration),
+            //HBHTTPEncodeHandler(configuration: self.configuration),
             HBHTTPDecodeHandler(configuration: self.configuration),
             HBHTTPServerHandler(responder: responder),
         ]
