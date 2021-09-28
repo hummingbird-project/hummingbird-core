@@ -15,10 +15,15 @@
 import Logging
 import NIOCore
 import NIOHTTP1
+import Dispatch
 
 /// Channel handler for responding to a request and returning a response
-final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler {
+///
+/// This channel handler combines the construction of the request from request parts, processing of
+/// request and generation of response and writing of response parts into one
+final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     typealias InboundIn = HTTPServerRequestPart
+    typealias OutboundIn = Never
     typealias OutboundOut = HTTPServerResponsePart
 
     enum State {
@@ -31,7 +36,6 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
 
     let responder: HBHTTPResponder
     let configuration: HBHTTPServer.Configuration
-
     var requestsInProgress: Int
     var closeAfterResponseWritten: Bool
     var propagatedError: Error?
@@ -56,6 +60,7 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         self.responder.handlerRemoved(context: context)
     }
 
+    /// Read HTTP parts and convert into HBHTTPRequest and send to `readRequest`
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let part = self.unwrapInboundIn(data)
 
@@ -107,7 +112,7 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
     func readRequest(context: ChannelHandlerContext, request: HBHTTPRequest) {
         // if error caught from previous channel handler then write an error
         if let error = propagatedError {
-            let keepAlive = request.head.isKeepAlive && self.closeAfterResponseWritten == false
+            let keepAlive = request.head.isKeepAlive && (self.closeAfterResponseWritten == false)
             var response = self.getErrorResponse(context: context, error: error, version: request.head.version)
             if request.head.version.major == 1 {
                 response.head.headers.replaceOrAdd(name: "connection", value: keepAlive ? "keep-alive" : "close")
@@ -145,9 +150,11 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
     }
 
     func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, request: HBHTTPRequest, keepAlive: Bool) {
-        let promise = context.eventLoop.makePromise(of: Void.self)
-        writeParts(context: context, response: response, promise: promise)
-        promise.futureResult.whenComplete { _ in
+        writeHTTPParts(context: context, response: response).whenComplete { result in
+            var keepAlive = keepAlive
+            if case .failure = result {
+                keepAlive = false
+            }
             // once we have finished writing the response we can drop the request body
             // if we are streaming we need to wait until the request has finished streaming
             if case .stream(let streamer) = request.body {
@@ -183,13 +190,14 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         }
     }
 
-    func writeParts(context: ChannelHandlerContext, response: HBHTTPResponse, promise: EventLoopPromise<Void>) {
+    /// Write HTTP parts to channel context
+    func writeHTTPParts(context: ChannelHandlerContext, response: HBHTTPResponse) -> EventLoopFuture<Void> {
         // add content-length header
         var head = response.head
         if case .byteBuffer(let buffer) = response.body {
             head.headers.replaceOrAdd(name: "content-length", value: buffer.readableBytes.description)
         }
-        // server name
+        // server name header
         if let serverName = self.configuration.serverName {
             head.headers.add(name: "server", value: serverName)
         }
@@ -197,23 +205,16 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         switch response.body {
         case .byteBuffer(let buffer):
             context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+            return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
         case .stream(let streamer):
-            streamer.write(on: context.eventLoop) { buffer in
+            return streamer.write(on: context.eventLoop) { buffer in
                 context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
             }
-            .whenComplete { result in
-                switch result {
-                case .failure:
-                    // not sure what do write when result is an error, sending .end and closing channel for the moment
-                    context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
-                    context.close(promise: nil)
-                case .success:
-                    context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
-                }
+            .flatAlways { _ in
+                return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
             }
         case .empty:
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+            return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
         }
     }
     
@@ -272,3 +273,21 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         }
     }
 }
+
+extension EventLoopFuture {
+    /// When EventLoopFuture has any result the callback is called with the Result. The callback returns an EventLoopFuture<>
+    /// which should be completed before result is passed on
+    fileprivate func flatAlways<NewValue>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Result<Value, Error>) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+        let next = eventLoop.makePromise(of: NewValue.self)
+        self.whenComplete { result in
+            switch result {
+            case .success:
+                callback(result).cascade(to: next)
+            case .failure(let error):
+                _ = callback(result).always { _ in next.fail(error) }
+            }
+        }
+        return next.futureResult
+    }
+}
+
