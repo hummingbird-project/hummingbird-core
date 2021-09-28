@@ -18,8 +18,16 @@ import NIOHTTP1
 
 /// Channel handler for responding to a request and returning a response
 final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler {
-    typealias InboundIn = HBHTTPRequest
+    typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
+
+    enum State {
+        case idle
+        case head(HTTPRequestHead)
+        case body(HTTPRequestHead, ByteBuffer)
+        case streamingBody(HBRequestBodyStreamer)
+        case error
+    }
 
     let responder: HBHTTPResponder
     let configuration: HBHTTPServer.Configuration
@@ -28,12 +36,16 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
     var closeAfterResponseWritten: Bool
     var propagatedError: Error?
 
+    /// handler state
+    var state: State
+
     init(responder: HBHTTPResponder, configuration: HBHTTPServer.Configuration) {
         self.responder = responder
         self.configuration = configuration
         self.requestsInProgress = 0
         self.closeAfterResponseWritten = false
         self.propagatedError = nil
+        self.state = .idle
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
@@ -45,7 +57,54 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let request = unwrapInboundIn(data)
+        let part = self.unwrapInboundIn(data)
+
+        switch (part, self.state) {
+        case (.head(let head), .idle):
+            self.state = .head(head)
+
+        case (.body(let part), .head(let head)):
+            self.state = .body(head, part)
+
+        case (.body(let part), .body(let head, let buffer)):
+            let streamer = HBRequestBodyStreamer(eventLoop: context.eventLoop, maxSize: self.configuration.maxUploadSize)
+            let request = HBHTTPRequest(head: head, body: .stream(streamer))
+            streamer.feed(.byteBuffer(buffer))
+            streamer.feed(.byteBuffer(part))
+            self.state = .streamingBody(streamer)
+            readRequest(context: context, request: request)
+
+        case (.body(let part), .streamingBody(let streamer)):
+            streamer.feed(.byteBuffer(part))
+            self.state = .streamingBody(streamer)
+
+        case (.end, .head(let head)):
+            self.state = .idle
+            let request = HBHTTPRequest(head: head, body: .byteBuffer(nil))
+            readRequest(context: context, request: request)
+
+        case (.end, .body(let head, let buffer)):
+            self.state = .idle
+            let request = HBHTTPRequest(head: head, body: .byteBuffer(buffer))
+            readRequest(context: context, request: request)
+
+        case (.end, .streamingBody(let streamer)):
+            self.state = .idle
+            streamer.feed(.end)
+
+        case (.end, .error):
+            self.state = .idle
+
+        case (_, .error):
+            break
+
+        default:
+            assertionFailure("Should not get here")
+            context.close(promise: nil)
+        }
+    }
+
+    func readRequest(context: ChannelHandlerContext, request: HBHTTPRequest) {
         // if error caught from previous channel handler then write an error
         if let error = propagatedError {
             let keepAlive = request.head.isKeepAlive && self.closeAfterResponseWritten == false
@@ -89,7 +148,6 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         let promise = context.eventLoop.makePromise(of: Void.self)
         writeParts(context: context, response: response, promise: promise)
         promise.futureResult.whenComplete { _ in
-//        context.write(self.wrapOutboundOut(response)).whenComplete { _ in
             // once we have finished writing the response we can drop the request body
             // if we are streaming we need to wait until the request has finished streaming
             if case .stream(let streamer) = request.body {
@@ -125,7 +183,7 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         }
     }
 
-    func writeParts(context: ChannelHandlerContext, response: HBHTTPResponse, promise: EventLoopPromise<Void>?) {
+    func writeParts(context: ChannelHandlerContext, response: HBHTTPResponse, promise: EventLoopPromise<Void>) {
         // add content-length header
         var head = response.head
         if case .byteBuffer(let buffer) = response.body {
@@ -186,7 +244,31 @@ final class HBHTTPServerHandler: ChannelInboundHandler, RemovableChannelHandler 
         }
     }
 
+    func read(context: ChannelHandlerContext) {
+        if case .streamingBody(let streamer) = self.state {
+            guard streamer.currentSize < self.configuration.maxStreamingBufferSize else {
+                streamer.onConsume = { streamer in
+                    if streamer.currentSize < self.configuration.maxStreamingBufferSize {
+                        context.read()
+                    }
+                }
+                return
+            }
+        }
+        context.read()
+    }
+
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         self.propagatedError = error
+        switch self.state {
+        case .streamingBody(let streamer):
+            // request has already been forwarded, have to pass error via streamer
+            streamer.feed(.error(error))
+            // only set state to error if already streaming a request body. Don't want to feed
+            // additional ByteBuffers to streamer if error has been set
+            self.state = .error
+        default:
+            self.propagatedError = error
+        }
     }
 }
