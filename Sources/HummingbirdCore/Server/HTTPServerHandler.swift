@@ -110,18 +110,20 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     }
 
     func readRequest(context: ChannelHandlerContext, request: HBHTTPRequest) {
-        // if error caught from previous channel handler then write an error
+        let streamer: HBRequestBodyStreamer?
+        if case .stream(let s) = request.body {
+            streamer = s
+        } else {
+            streamer = nil
+        }
+        let keepAlive = request.head.isKeepAlive && (self.closeAfterResponseWritten == false || self.requestsInProgress > 1)
+        let httpVersion = request.head.version
+
+        // if error caught while parsing HTTP
         if let error = propagatedError {
-            let keepAlive = request.head.isKeepAlive && (self.closeAfterResponseWritten == false)
-            var response = self.getErrorResponse(context: context, error: error, version: request.head.version)
-            if request.head.version.major == 1 {
+            var response = self.getErrorResponse(context: context, error: error, version: httpVersion)
+            if httpVersion.major == 1 {
                 response.head.headers.replaceOrAdd(name: "connection", value: keepAlive ? "keep-alive" : "close")
-            }
-            let streamer: HBRequestBodyStreamer?
-            if case .stream(let s) = request.body {
-                streamer = s
-            } else {
-                streamer = nil
             }
             self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
             self.propagatedError = nil
@@ -132,23 +134,17 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         // respond to request
         self.responder.respond(to: request, context: context) { result in
             // should we keep the channel open after responding.
-            let keepAlive = request.head.isKeepAlive && (self.closeAfterResponseWritten == false || self.requestsInProgress > 1)
+            //let keepAlive = request.head.isKeepAlive && (self.closeAfterResponseWritten == false || self.requestsInProgress > 1)
             var response: HBHTTPResponse
             switch result {
             case .failure(let error):
-                response = self.getErrorResponse(context: context, error: error, version: request.head.version)
+                response = self.getErrorResponse(context: context, error: error, version: httpVersion)
 
             case .success(let successfulResponse):
                 response = successfulResponse
             }
-            if request.head.version.major == 1 {
+            if httpVersion.major == 1 {
                 response.head.headers.replaceOrAdd(name: "connection", value: keepAlive ? "keep-alive" : "close")
-            }
-            let streamer: HBRequestBodyStreamer?
-            if case .stream(let s) = request.body {
-                streamer = s
-            } else {
-                streamer = nil
             }
             // if we are already running inside the context eventloop don't use `EventLoop.execute`
             if context.eventLoop.inEventLoop {
