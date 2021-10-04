@@ -117,7 +117,13 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             if request.head.version.major == 1 {
                 response.head.headers.replaceOrAdd(name: "connection", value: keepAlive ? "keep-alive" : "close")
             }
-            self.writeResponse(context: context, response: response, request: request, keepAlive: keepAlive)
+            let streamer: HBRequestBodyStreamer?
+            if case .stream(let s) = request.body {
+                streamer = s
+            } else {
+                streamer = nil
+            }
+            self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
             self.propagatedError = nil
             return
         }
@@ -138,24 +144,24 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             if request.head.version.major == 1 {
                 response.head.headers.replaceOrAdd(name: "connection", value: keepAlive ? "keep-alive" : "close")
             }
+            let streamer: HBRequestBodyStreamer?
+            if case .stream(let s) = request.body {
+                streamer = s
+            } else {
+                streamer = nil
+            }
             // if we are already running inside the context eventloop don't use `EventLoop.execute`
             if context.eventLoop.inEventLoop {
-                self.writeResponse(context: context, response: response, request: request, keepAlive: keepAlive)
+                self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
             } else {
                 context.eventLoop.execute {
-                    self.writeResponse(context: context, response: response, request: request, keepAlive: keepAlive)
+                    self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
                 }
             }
         }
     }
 
-    func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, request: HBHTTPRequest, keepAlive: Bool) {
-        let streamer: HBRequestBodyStreamer?
-        if case .stream(let s) = request.body {
-            streamer = s
-        } else {
-            streamer = nil
-        }
+    func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, streamer: HBRequestBodyStreamer?, keepAlive: Bool) {
         self.writeHTTPParts(context: context, response: response).whenComplete { result in
             var keepAlive = keepAlive
             if case .failure = result {
