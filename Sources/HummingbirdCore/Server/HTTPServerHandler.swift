@@ -212,16 +212,21 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         switch response.body {
         case .byteBuffer(let buffer):
             context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            // don't use error from writeAndFlush so return static version instead of allocating
+            // a new EventLoopFuture.
+            return context.eventLoop.makeSucceededVoidFuture()
         case .stream(let streamer):
             return streamer.write(on: context.eventLoop) { buffer in
                 context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
             }
             .flatAlways { _ in
-                return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                return context.eventLoop.makeSucceededVoidFuture()
             }
         case .empty:
-            return context.writeAndFlush(self.wrapOutboundOut(.end(nil)))
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            return context.eventLoop.makeSucceededVoidFuture()
         }
     }
 
