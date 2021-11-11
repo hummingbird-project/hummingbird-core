@@ -17,10 +17,18 @@ import NIOHTTP1
 
 /// HTTP response
 public struct HBHTTPResponse {
+    public var informationalHead: HTTPResponseHead?
     public var head: HTTPResponseHead
     public var body: HBResponseBody
 
     public init(head: HTTPResponseHead, body: HBResponseBody) {
+        self.informationalHead = nil
+        self.head = head
+        self.body = body
+    }
+
+    public init(informationalHead: HTTPResponseHead?, head: HTTPResponseHead, body: HBResponseBody) {
+        self.informationalHead = informationalHead
         self.head = head
         self.body = body
     }

@@ -208,6 +208,9 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         if let serverName = self.configuration.serverName {
             head.headers.add(name: "server", value: serverName)
         }
+        if let informationalHead = response.informationalHead {
+            context.write(self.wrapOutboundOut(.head(informationalHead)), promise: nil)
+        }
         context.write(self.wrapOutboundOut(.head(head)), promise: nil)
         switch response.body {
         case .byteBuffer(let buffer):
