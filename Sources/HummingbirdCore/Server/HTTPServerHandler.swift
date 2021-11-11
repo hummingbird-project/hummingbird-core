@@ -157,7 +157,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     }
 
     func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, streamer: HBRequestBodyStreamer?, keepAlive: Bool) {
-        self.writeHTTPParts(context: context, response: response).whenComplete { result in
+        self.writeHTTPParts(context: context, response: response).whenComplete { _ in
             // once we have finished writing the response we can drop the request body
             // if we are streaming we need to wait until the request has finished streaming
             if let streamer = streamer {
