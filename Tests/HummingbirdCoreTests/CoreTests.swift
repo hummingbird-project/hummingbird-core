@@ -490,6 +490,31 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try timeoutPromise.wait())
     }
 
+    func testInformationalHeader() {
+        struct InformationalResponder: HBHTTPResponder {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+                let informationalHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .continue)
+                let responseBody = context.channel.allocator.buffer(string: "Hello")
+                let response = HBHTTPResponse(informationalHead: informationalHead, head: responseHead, body: .byteBuffer(responseBody))
+                onComplete(.success(response))
+            }
+        }
+        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 0)))
+        XCTAssertNoThrow(try server.start(responder: InformationalResponder()).wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let client = HBXCTClient(host: "localhost", port: server.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
+        let future = client.get("/").flatMapThrowing { response in
+            var body = try XCTUnwrap(response.body)
+            XCTAssertEqual(body.readString(length: body.readableBytes), "Hello")
+        }
+        XCTAssertNoThrow(try future.wait())
+    }
+
     /// Test we can run with an embedded channel. HummingbirdXCT uses this quite a lot
     func testEmbeddedChannel() {
         enum HTTPError: Error {

@@ -202,6 +202,10 @@ public class HBXCTClient {
             let part = unwrapInboundIn(data)
             switch (part, self.state) {
             case (.head(let head), .idle):
+                // ignore informational headers
+                if head.status.code < 200 {
+                    state = .idle
+                }
                 state = .head(head)
             case (.body(let body), .head(let head)):
                 self.state = .body(head, body)
