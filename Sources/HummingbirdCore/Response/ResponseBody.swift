@@ -14,7 +14,7 @@
 
 import NIOCore
 
-/// Response body. Either static
+/// Response body. Can be a single ByteBuffer, a stream of ByteBuffers or empty
 public enum HBResponseBody {
     /// Body stored as a single ByteBuffer
     case byteBuffer(ByteBuffer)
@@ -29,20 +29,14 @@ public enum HBResponseBody {
     /// point is should return `'end`.
     ///
     /// - Parameter closure: Closure called whenever a new ByteBuffer is needed
-    public static func streamCallback(_ closure: @escaping (EventLoop) -> EventLoopFuture<HBResponseBody.StreamResult>) -> Self {
+    public static func streamCallback(_ closure: @escaping (EventLoop) -> EventLoopFuture<HBStreamerOutput>) -> Self {
         .stream(ResponseBodyStreamerCallback(closure: closure))
-    }
-
-    /// response body streamer result. Either a ByteBuffer or the end of the stream
-    public enum StreamResult {
-        case byteBuffer(ByteBuffer)
-        case end
     }
 }
 
-/// Object supplying bytebuffers for a response body
+/// Object supplying ByteBuffers for a response body
 public protocol HBResponseBodyStreamer {
-    func read(on eventLoop: EventLoop) -> EventLoopFuture<HBResponseBody.StreamResult>
+    func read(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput>
 }
 
 extension HBResponseBodyStreamer {
@@ -68,9 +62,44 @@ extension HBResponseBodyStreamer {
     }
 }
 
+/// Response body that you can feed ByteBuffers
+public struct HBResponseByteBufferStreamer: HBResponseBodyStreamer {
+    let streamer: HBByteBufferStreamer
+
+    /// Create HBResponseByteBufferStreamer for streamer response bodies that request feeds
+    /// - Parameters:
+    ///   - eventLoop: EventLoop everything runs on
+    ///   - maxSize: Maximum size of data
+    public init(on eventLoop: EventLoop, maxSize: Int) {
+        self.streamer = .init(eventLoop: eventLoop, maxSize: maxSize)
+    }
+
+    /// Feed streamer a ByteBuffer or end of stream
+    /// - Parameter result: feed input (ByteBuffer of end of stream)
+    public func feed(_ result: HBByteBufferStreamer.FeedInput) {
+        streamer.feed(result)
+    }
+
+    /// Read ByteBuffer from streamer.
+    ///
+    /// This is used internally when serializing the response body
+    /// - Parameter eventLoop: EventLoop everything runs on
+    /// - Returns: Streamer output (ByteBuffer or end of stream)
+    public func read(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput> {
+        return self.streamer.consume(on: eventLoop)
+    }
+}
+
 struct ResponseBodyStreamerCallback: HBResponseBodyStreamer {
-    let closure: (EventLoop) -> EventLoopFuture<HBResponseBody.StreamResult>
-    func read(on eventLoop: EventLoop) -> EventLoopFuture<HBResponseBody.StreamResult> {
+    /// Closure called whenever a new ByteBuffer is needed
+    let closure: (EventLoop) -> EventLoopFuture<HBStreamerOutput>
+
+    /// Read ByteBuffer from streamer.
+    ///
+    /// This is used internally when serializing the response body
+    /// - Parameter eventLoop: EventLoop everything runs on
+    /// - Returns: Streamer output (ByteBuffer or end of stream)
+    func read(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput> {
         return self.closure(eventLoop)
     }
 }
