@@ -209,7 +209,7 @@ class HummingBirdCoreTests: XCTestCase {
     func testStreamBody2() {
         struct Responder: HBHTTPResponder {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
-                let streamer = HBByteBufferStreamer(eventLoop: context.eventLoop, maxSize: 2048*1024)
+                let streamer = HBByteBufferStreamer(eventLoop: context.eventLoop, maxSize: 2048 * 1024)
                 request.body.stream?.consumeAll(on: context.eventLoop) { buffer in
                     streamer.feed(.byteBuffer(buffer))
                     return context.eventLoop.makeSucceededVoidFuture()
@@ -218,7 +218,7 @@ class HummingBirdCoreTests: XCTestCase {
                     streamer.feed(.error(error))
                     throw error
                 }
-                .whenComplete { result in
+                .whenComplete { _ in
                     streamer.feed(.end)
                 }
                 let response = HBHTTPResponse(
