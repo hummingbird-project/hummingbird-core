@@ -74,6 +74,18 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
     /// Feed a ByteBuffer to the request
     /// - Parameter result: Bytebuffer or end tag
     public func feed(_ result: FeedInput) {
+        if self.eventLoop.inEventLoop {
+            _feed(result)
+        } else {
+            self.eventLoop.execute {
+                self._feed(result)
+            }
+        }
+    }
+
+    /// Feed a ByteBuffer to the request
+    /// - Parameter result: Bytebuffer or end tag
+    private func _feed(_ result: FeedInput) {
         self.eventLoop.assertInEventLoop()
 
         // queue most have at least one promise on it, or something has gone wrong
