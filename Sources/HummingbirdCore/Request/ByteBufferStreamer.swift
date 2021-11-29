@@ -75,7 +75,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
     /// - Parameter result: Bytebuffer or end tag
     public func feed(_ result: FeedInput) {
         if self.eventLoop.inEventLoop {
-            _feed(result)
+            self._feed(result)
         } else {
             self.eventLoop.execute {
                 self._feed(result)
