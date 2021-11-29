@@ -29,6 +29,16 @@ public enum HBResponseBody {
     /// point is should return `'end`.
     ///
     /// - Parameter closure: Closure called whenever a new ByteBuffer is needed
+    public static func stream(_ streamer: HBByteBufferStreamer) -> Self {
+        .stream(ResponseByteBufferStreamer(streamer: streamer))
+    }
+
+    /// Construct a `HBResponseBody` from a closure supplying `ByteBuffer`'s.
+    ///
+    /// This function should supply `.byteBuffer(ByteBuffer)` until there is no more data, at which
+    /// point is should return `'end`.
+    ///
+    /// - Parameter closure: Closure called whenever a new ByteBuffer is needed
     public static func streamCallback(_ closure: @escaping (EventLoop) -> EventLoopFuture<HBStreamerOutput>) -> Self {
         .stream(ResponseBodyStreamerCallback(closure: closure))
     }
@@ -63,29 +73,15 @@ extension HBResponseBodyStreamer {
 }
 
 /// Response body that you can feed ByteBuffers
-public struct HBResponseByteBufferStreamer: HBResponseBodyStreamer {
+struct ResponseByteBufferStreamer: HBResponseBodyStreamer {
     let streamer: HBByteBufferStreamer
-
-    /// Create HBResponseByteBufferStreamer for streamer response bodies that request feeds
-    /// - Parameters:
-    ///   - eventLoop: EventLoop everything runs on
-    ///   - maxSize: Maximum size of data
-    public init(on eventLoop: EventLoop, maxSize: Int) {
-        self.streamer = .init(eventLoop: eventLoop, maxSize: maxSize)
-    }
-
-    /// Feed streamer a ByteBuffer or end of stream
-    /// - Parameter result: feed input (ByteBuffer of end of stream)
-    public func feed(_ result: HBByteBufferStreamer.FeedInput) {
-        streamer.feed(result)
-    }
 
     /// Read ByteBuffer from streamer.
     ///
     /// This is used internally when serializing the response body
     /// - Parameter eventLoop: EventLoop everything runs on
     /// - Returns: Streamer output (ByteBuffer or end of stream)
-    public func read(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput> {
+    func read(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput> {
         return self.streamer.consume(on: eventLoop)
     }
 }
