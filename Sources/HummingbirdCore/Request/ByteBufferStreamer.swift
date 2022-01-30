@@ -41,7 +41,7 @@ public protocol HBStreamerProtocol: HBSendable {
 }
 
 /// Request body streamer. `HBHTTPDecodeHandler` feeds this with ByteBuffers while the Router consumes them
-/// 
+///
 /// Can set as @unchecked Sendable as interface functions are only allowed to run on same EventLoop
 public final class HBByteBufferStreamer: HBStreamerProtocol {
     public enum StreamerError: Swift.Error {
