@@ -46,7 +46,7 @@ class HummingBirdTLSTests: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         #endif
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        let server = HBHTTPServer(group: eventLoopGroup, configuration: .init(address: .hostname(port: 0)))
+        let server = HBHTTPServer(group: eventLoopGroup, configuration: .init(address: .hostname(port: 0), serverName: testServerName))
         try server.addTLS(tlsConfiguration: self.getServerTLSConfiguration())
         try server.start(responder: HelloResponder()).wait()
         defer { XCTAssertNoThrow(try server.stop().wait()) }
@@ -54,7 +54,7 @@ class HummingBirdTLSTests: XCTestCase {
         let client = try HBXCTClient(
             host: "localhost",
             port: server.port!,
-            configuration: .init(tlsConfiguration: self.getClientTLSConfiguration()),
+            configuration: .init(tlsConfiguration: self.getClientTLSConfiguration(), serverName: testServerName),
             eventLoopGroupProvider: .createNew
         )
         client.connect()

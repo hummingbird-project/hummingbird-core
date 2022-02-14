@@ -92,6 +92,8 @@ function createCertSwiftFile() {
 EOF
     printf "
 
+let testServerName = \"$SERVER\"
+
 let caCertificateData =
 \"\"\"\n$(cat ca.pem)
 \"\"\"
@@ -123,3 +125,5 @@ generateClientCertificate "/C=UK/ST=Edinburgh/L=Edinburgh/O=MQTTNIO/OU=Client/CN
 
 createCertSwiftFile $FULL_HOME/../Tests/HummingbirdTLSTests/Certificates.swift
 createCertSwiftFile $FULL_HOME/../Tests/HummingbirdCoreTests/Certificates.swift
+
+rm -rf "$TMPDIR"

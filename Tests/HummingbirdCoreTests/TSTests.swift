@@ -52,7 +52,11 @@ class TransportServicesTests: XCTestCase {
         XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let client = HBXCTClient(host: "localhost", port: server.port!, eventLoopGroupProvider: .createNew)
+        let client = HBXCTClient(
+            host: "localhost", 
+            port: server.port!, 
+            eventLoopGroupProvider: .createNew
+        )
         client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
@@ -71,6 +75,7 @@ class TransportServicesTests: XCTestCase {
         ))
         let configuration = HBHTTPServer.Configuration(
             address: .hostname(port: 0),
+            serverName: testServerName,
             tlsOptions: tlsOptions
         )
         let server = HBHTTPServer(group: eventLoopGroup, configuration: configuration)
@@ -80,7 +85,7 @@ class TransportServicesTests: XCTestCase {
         let client = try HBXCTClient(
             host: "localhost",
             port: server.port!,
-            configuration: .init(tlsConfiguration: self.getClientTLSConfiguration()),
+            configuration: .init(tlsConfiguration: self.getClientTLSConfiguration(), serverName: testServerName),
             eventLoopGroupProvider: .createNew
         )
         client.connect()
