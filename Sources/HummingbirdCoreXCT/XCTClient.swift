@@ -155,7 +155,7 @@ public class HBXCTClient {
     private func getBootstrap() throws -> NIOClientTCPBootstrap {
         if let tlsConfiguration = self.configuration.tlsConfiguration {
             let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
-            let tlsProvider = try NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: self.configuration.serverName ?? host)
+            let tlsProvider = try NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: self.configuration.serverName ?? self.host)
             let bootstrap = NIOClientTCPBootstrap(ClientBootstrap(group: self.eventLoopGroup), tls: tlsProvider)
             bootstrap.enableTLS()
             return bootstrap
