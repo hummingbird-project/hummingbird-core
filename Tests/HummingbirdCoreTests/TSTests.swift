@@ -39,6 +39,11 @@ class TransportServicesTests: XCTestCase {
             let response = HBHTTPResponse(head: responseHead, body: .byteBuffer(responseBody))
             onComplete(.success(response))
         }
+        var logger: Logger
+        init() {
+            self.logger = Logger(label: "HB")
+            self.logger.logLevel = .trace
+        }
     }
 
     func testConnect() {
@@ -88,7 +93,7 @@ class TransportServicesTests: XCTestCase {
         XCTAssertNoThrow(try future.wait())
     }
 
-    let caCertificateData = """
+    /*let caCertificateData = """
     -----BEGIN CERTIFICATE-----
     MIIDajCCAlICCQDKUlXSE51o8zANBgkqhkiG9w0BAQsFADB3MQswCQYDVQQGEwJV
     SzESMBAGA1UECAwJRWRpbmJ1cmdoMRIwEAYDVQQHDAlFZGluYnVyZ2gxFDASBgNV
@@ -165,7 +170,7 @@ class TransportServicesTests: XCTestCase {
     hVTQqDbl2Kw1n1N2ctPqeYPVmOnzUjPZyUCL4rRR0xUS6aNBglwXHjfVKI+KzjSJ
     PZlm7jI78/XEnGFY6DLXhk6z
     -----END PRIVATE KEY-----
-    """
+    """*/
 
     func getClientTLSConfiguration() throws -> TLSConfiguration {
         let caCertificate = try NIOSSLCertificate(bytes: [UInt8](caCertificateData.utf8), format: .pem)

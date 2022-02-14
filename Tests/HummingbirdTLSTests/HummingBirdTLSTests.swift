@@ -33,23 +33,27 @@ class HummingBirdTLSTests: XCTestCase {
         }
 
         var logger: Logger? = Logger(label: "Core")
+        
+        init() {
+            logger?.logLevel = .trace
+        }
     }
 
     func testConnect() throws {
         #if os(iOS)
         let eventLoopGroup = NIOTSEventLoopGroup()
         #else
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         #endif
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        let server = HBHTTPServer(group: eventLoopGroup, configuration: .init(address: .hostname(port: 8000)))
+        let server = HBHTTPServer(group: eventLoopGroup, configuration: .init(address: .hostname(port: 0)))
         try server.addTLS(tlsConfiguration: self.getServerTLSConfiguration())
         try server.start(responder: HelloResponder()).wait()
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let client = try HBXCTClient(
             host: "localhost",
-            port: server.configuration.address.port!,
+            port: server.port!,
             configuration: .init(tlsConfiguration: self.getClientTLSConfiguration()),
             eventLoopGroupProvider: .createNew
         )
@@ -63,7 +67,7 @@ class HummingBirdTLSTests: XCTestCase {
         XCTAssertNoThrow(try future.wait())
     }
 
-    let caCertificateData = """
+    /*let caCertificateData = """
     -----BEGIN CERTIFICATE-----
     MIIDajCCAlICCQDKUlXSE51o8zANBgkqhkiG9w0BAQsFADB3MQswCQYDVQQGEwJV
     SzESMBAGA1UECAwJRWRpbmJ1cmdoMRIwEAYDVQQHDAlFZGluYnVyZ2gxFDASBgNV
@@ -196,7 +200,7 @@ class HummingBirdTLSTests: XCTestCase {
     hVTQqDbl2Kw1n1N2ctPqeYPVmOnzUjPZyUCL4rRR0xUS6aNBglwXHjfVKI+KzjSJ
     PZlm7jI78/XEnGFY6DLXhk6z
     -----END PRIVATE KEY-----
-    """
+    """*/
 
     func getServerTLSConfiguration() throws -> TLSConfiguration {
         let caCertificate = try NIOSSLCertificate(bytes: [UInt8](caCertificateData.utf8), format: .pem)
