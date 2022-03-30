@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+#if compiler(>=5.6)
+@preconcurrency import NIOHTTP1
+#else
 import NIOHTTP1
+#endif
 
 /// HTTP response
 public struct HBHTTPResponse: HBSendable {

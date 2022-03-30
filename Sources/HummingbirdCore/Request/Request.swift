@@ -12,8 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
+#if compiler(>=5.6)
+@preconcurrency import NIOHTTP1
+#else
 import NIOHTTP1
+#endif
+import NIOCore
 
 /// HTTP request
 public struct HBHTTPRequest: HBSendable {

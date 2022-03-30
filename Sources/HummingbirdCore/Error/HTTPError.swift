@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+#if compiler(>=5.6)
+@preconcurrency import NIOHTTP1
+#else
 import NIOHTTP1
+#endif
 
 /// Default HTTP error. Provides an HTTP status and a message is so desired
 public struct HBHTTPError: Error, HBHTTPResponseError, HBSendable {

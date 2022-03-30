@@ -12,9 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if compiler(>=5.6)
+@preconcurrency import NIOCore
+#else
 import NIOCore
+#endif
 
-#if swift(>=5.5) && canImport(_Concurrency)
+#if compiler(>=5.6)
 public typealias HBStreamCallback = @Sendable (EventLoop) -> EventLoopFuture<HBStreamerOutput>
 #else
 public typealias HBStreamCallback = (EventLoop) -> EventLoopFuture<HBStreamerOutput>
