@@ -325,8 +325,7 @@ final class HBStaticStreamer: HBStreamerProtocol {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-
+#if compiler(>=5.6)
 extension HBByteBufferStreamer: @unchecked Sendable {}
 extension HBStaticStreamer: @unchecked Sendable {}
 #endif
