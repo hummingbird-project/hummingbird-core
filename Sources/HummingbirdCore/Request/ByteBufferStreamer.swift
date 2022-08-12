@@ -13,11 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-#if compiler(>=5.6)
-@preconcurrency import NIOCore
-#else
 import NIOCore
-#endif
 
 /// Values returned when we consume the contents of the streamer
 public enum HBStreamerOutput: HBSendable {

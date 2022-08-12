@@ -12,14 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.6)
-@preconcurrency import NIOCore
-#else
-import NIOCore
-#endif
 import HummingbirdCore
 import HummingbirdCoreXCT
 import Logging
+import NIOCore
 import NIOEmbedded
 import NIOHTTP1
 import NIOPosix

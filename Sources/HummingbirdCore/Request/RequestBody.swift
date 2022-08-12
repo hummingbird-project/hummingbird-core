@@ -12,11 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.6)
-@preconcurrency import NIOCore
-#else
 import NIOCore
-#endif
 
 /// Request Body. Either a ByteBuffer or a ByteBuffer streamer
 public enum HBRequestBody: HBSendable {
