@@ -31,6 +31,12 @@ extension HBHTTPServer {
         public let tcpNoDelay: Bool
         /// Pipelining ensures that only one http request is processed at one time
         public let withPipeliningAssistance: Bool
+        /// Whether to provide assistance handling protocol errors (e.g. failure
+        /// to parse the HTTP request) by sending 400 errors. Defaults to `true`.
+        public let httpErrorHandling: Bool
+        /// Whether to validate outbound request headers to confirm that they meet
+        /// spec compliance. Defaults to `true`.
+        public let outboundHeaderValidation: Bool
         #if canImport(Network)
         /// TLS options for NIO Transport services
         public let tlsOptions: TSTLSOptions
@@ -45,6 +51,10 @@ extension HBHTTPServer {
         ///   - reuseAddress: Allows socket to be bound to an address that is already in use.
         ///   - tcpNoDelay: Disables the Nagle algorithm for send coalescing.
         ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
+        ///   = httpErrorHandling: Whether to provide assistance handling protocol errors (e.g. failure
+        ///         to parse the HTTP request) by sending 400 errors. Defaults to `true`.
+        ///   = outboundHeaderValidation: Whether to validate outbound request headers to confirm that they meet
+        ///         spec compliance. Defaults to `true`.
         public init(
             address: HBBindAddress = .hostname(),
             serverName: String? = nil,
@@ -53,7 +63,9 @@ extension HBHTTPServer {
             backlog: Int = 256,
             reuseAddress: Bool = true,
             tcpNoDelay: Bool = true,
-            withPipeliningAssistance: Bool = true
+            withPipeliningAssistance: Bool = true,
+            httpErrorHandling: Bool = true,
+            outboundHeaderValidation: Bool = true
         ) {
             self.address = address
             self.serverName = serverName
@@ -63,6 +75,8 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = tcpNoDelay
             self.withPipeliningAssistance = withPipeliningAssistance
+            self.httpErrorHandling = httpErrorHandling
+            self.outboundHeaderValidation = outboundHeaderValidation
             #if canImport(Network)
             self.tlsOptions = .none
             #endif
@@ -76,6 +90,10 @@ extension HBHTTPServer {
         ///   - maxStreamingBufferSize: Maximum size of buffer for streaming request payloads
         ///   - reuseAddress: Allows socket to be bound to an address that is already in use.
         ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
+        ///   = httpErrorHandling: Whether to provide assistance handling protocol errors (e.g. failure
+        ///         to parse the HTTP request) by sending 400 errors. Defaults to `true`.
+        ///   = outboundHeaderValidation: Whether to validate outbound request headers to confirm that they meet
+        ///         spec compliance. Defaults to `true`.
         ///   - tlsOptions: TLS options for when you are using NIOTransportServices
         #if canImport(Network)
         public init(
@@ -85,6 +103,8 @@ extension HBHTTPServer {
             maxStreamingBufferSize: Int = 1 * 1024 * 1024,
             reuseAddress: Bool = true,
             withPipeliningAssistance: Bool = true,
+            httpErrorHandling: Bool = true,
+            outboundHeaderValidation: Bool = true,
             tlsOptions: TSTLSOptions
         ) {
             self.address = address
@@ -95,6 +115,8 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = true
             self.withPipeliningAssistance = withPipeliningAssistance
+            self.httpErrorHandling = httpErrorHandling
+            self.outboundHeaderValidation = outboundHeaderValidation
             self.tlsOptions = tlsOptions
         }
         #endif
