@@ -49,7 +49,8 @@ public struct HTTP1ChannelInitializer: HBChannelInitializer {
         return channel.pipeline.configureHTTPServerPipeline(
             withPipeliningAssistance: configuration.withPipeliningAssistance,
             withServerUpgrade: serverUpgrade,
-            withErrorHandling: true
+            withErrorHandling: configuration.httpErrorHandling,
+            withOutboundHeaderValidation: configuration.outboundHeaderValidation
         ).flatMap {
             return channel.pipeline.addHandlers(childHandlers)
         }
