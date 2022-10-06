@@ -48,12 +48,14 @@ extension HBHTTPServer {
         ///   - serverName: Server name to return in "server" header
         ///   - maxUploadSize: Maximum upload size allowed
         ///   - maxStreamingBufferSize: Maximum size of buffer for streaming request payloads
+        ///   - backlog: the maximum length for the queue of pending connections.  If a connection request arrives with the queue full,
+        ///         the client may receive an error with an indication of ECONNREFUSE
         ///   - reuseAddress: Allows socket to be bound to an address that is already in use.
         ///   - tcpNoDelay: Disables the Nagle algorithm for send coalescing.
         ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
-        ///   = httpErrorHandling: Whether to provide assistance handling protocol errors (e.g. failure
+        ///   - httpErrorHandling: Whether to provide assistance handling protocol errors (e.g. failure
         ///         to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-        ///   = outboundHeaderValidation: Whether to validate outbound request headers to confirm that they meet
+        ///   - outboundHeaderValidation: Whether to validate outbound request headers to confirm that they meet
         ///         spec compliance. Defaults to `true`.
         public init(
             address: HBBindAddress = .hostname(),
@@ -90,9 +92,9 @@ extension HBHTTPServer {
         ///   - maxStreamingBufferSize: Maximum size of buffer for streaming request payloads
         ///   - reuseAddress: Allows socket to be bound to an address that is already in use.
         ///   - withPipeliningAssistance: Pipelining ensures that only one http request is processed at one time
-        ///   = httpErrorHandling: Whether to provide assistance handling protocol errors (e.g. failure
+        ///   - httpErrorHandling: Whether to provide assistance handling protocol errors (e.g. failure
         ///         to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-        ///   = outboundHeaderValidation: Whether to validate outbound request headers to confirm that they meet
+        ///   - outboundHeaderValidation: Whether to validate outbound request headers to confirm that they meet
         ///         spec compliance. Defaults to `true`.
         ///   - tlsOptions: TLS options for when you are using NIOTransportServices
         #if canImport(Network)
@@ -111,9 +113,9 @@ extension HBHTTPServer {
             self.serverName = serverName
             self.maxUploadSize = maxUploadSize
             self.maxStreamingBufferSize = maxStreamingBufferSize
-            self.backlog = 256
+            self.backlog = 256 // not used by Network framework
             self.reuseAddress = reuseAddress
-            self.tcpNoDelay = true
+            self.tcpNoDelay = true // not used by Network framework
             self.withPipeliningAssistance = withPipeliningAssistance
             self.httpErrorHandling = httpErrorHandling
             self.outboundHeaderValidation = outboundHeaderValidation
