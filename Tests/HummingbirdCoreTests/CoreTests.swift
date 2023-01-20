@@ -581,4 +581,28 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertEqual(HBRequestBody.byteBuffer(self.randomBuffer(size: 64)).description, "64 bytes")
         XCTAssertEqual(HBRequestBody.byteBuffer(.init(string: "Test String")).description, "\"Test String\"")
     }
+
+    func testIdleHandler() {
+        struct HelloResponder: HBHTTPResponder {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+                let response = HBHTTPResponse(head: responseHead, body: .empty)
+                onComplete(.success(response))
+            }
+        }
+        let server = HBHTTPServer(
+            group: Self.eventLoopGroup,
+            configuration: .init(address: .hostname(port: 0), idleReadTimeout: .seconds(1))
+        )
+        XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let client = HBXCTClient(host: "localhost", port: server.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
+        let future = client.get("/").flatMapThrowing { _ in
+        }
+        XCTAssertNoThrow(try future.wait())
+    }
 }

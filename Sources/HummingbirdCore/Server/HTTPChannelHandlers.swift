@@ -17,8 +17,13 @@ import NIOCore
 /// Stores channel handlers used in HTTP server
 struct HBHTTPChannelHandlers {
     /// Initialize `HBHTTPChannelHandlers`
-    public init() {
+    init() {
         self.handlers = []
+    }
+
+    /// Initialize `HBHTTPChannelHandlers`
+    init(_ initialHandlers: [RemovableChannelHandler]) {
+        self.handlers = initialHandlers.map { handler in return { handler } }
     }
 
     /// Add autoclosure that creates a ChannelHandler

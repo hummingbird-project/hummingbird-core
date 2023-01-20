@@ -48,7 +48,7 @@ public final class HBHTTPServer {
         self.eventLoopGroup = group
         self.configuration = configuration
         self.quiesce = nil
-        self.childChannelHandlers = .init()
+        self.childChannelHandlers = configuration.idleReadTimeout.map { .init([IdleStateHandler(readTimeout: $0)]) } ?? .init()
         // defaults to HTTP1
         self.httpChannelInitializer = HTTP1ChannelInitializer()
     }

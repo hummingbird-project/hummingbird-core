@@ -247,6 +247,11 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
                 context.close(promise: nil)
             }
 
+        case let evt as IdleStateHandler.IdleStateEvent where evt == .read:
+            if case .idle = self.state {
+                context.close(promise: nil)
+            }
+
         default:
             self.responder.logger.debug("Unhandled event \(event)")
             context.fireUserInboundEventTriggered(event)
