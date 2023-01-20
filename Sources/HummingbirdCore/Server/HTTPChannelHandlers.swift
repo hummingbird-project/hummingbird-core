@@ -21,11 +21,6 @@ struct HBHTTPChannelHandlers {
         self.handlers = []
     }
 
-    /// Initialize `HBHTTPChannelHandlers`
-    init(_ initialHandlers: [RemovableChannelHandler]) {
-        self.handlers = initialHandlers.map { handler in return { handler } }
-    }
-
     /// Add autoclosure that creates a ChannelHandler
     public mutating func addHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) {
         self.handlers.append(handler)

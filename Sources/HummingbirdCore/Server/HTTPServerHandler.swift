@@ -235,7 +235,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             if self.requestsInProgress > 0 {
                 self.closeAfterResponseWritten = true
             } else {
-                context.close(promise: nil)
+                self.close(context: context)
             }
 
         case is ChannelShouldQuiesceEvent:
@@ -244,18 +244,31 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             if self.requestsInProgress > 0 {
                 self.closeAfterResponseWritten = true
             } else {
-                context.close(promise: nil)
+                self.close(context: context)
             }
 
         case let evt as IdleStateHandler.IdleStateEvent where evt == .read:
+            // if we get an idle read event and we haven't completed reading the request
+            // close the connection
             if case .idle = self.state {
-                context.close(promise: nil)
+            } else {
+                self.responder.logger.trace("Idle read timeout, so close channel")
+                self.close(context: context)
             }
 
         default:
             self.responder.logger.debug("Unhandled event \(event)")
             context.fireUserInboundEventTriggered(event)
         }
+    }
+
+    /// Close the connection and pass closing error to request handlers
+    func close(context: ChannelHandlerContext, mode: CloseMode = .all) {
+        // if in the middle of streaming a request pass an error to streamer
+        if case .streamingBody(let streamer) = self.state {
+            streamer.feed(.error(HBHTTPServer.Error.connectionClosing))
+        }
+        context.close(mode: mode, promise: nil)
     }
 
     func read(context: ChannelHandlerContext) {

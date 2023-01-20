@@ -585,6 +585,7 @@ class HummingBirdCoreTests: XCTestCase {
     func testIdleHandler() {
         struct HelloResponder: HBHTTPResponder {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                print(context.channel.pipeline)
                 let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
                 let response = HBHTTPResponse(head: responseHead, body: .empty)
                 onComplete(.success(response))
@@ -592,8 +593,10 @@ class HummingBirdCoreTests: XCTestCase {
         }
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
-            configuration: .init(address: .hostname(port: 0), idleReadTimeout: .seconds(1))
+            configuration: .init(address: .hostname(port: 0))
         )
+        server.addChannelHandler(HTTPServerRequestSlowdown())
+        server.addChannelHandler(IdleStateHandler(readTimeout: .seconds(1)))
         XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -601,8 +604,27 @@ class HummingBirdCoreTests: XCTestCase {
         client.connect()
         defer { XCTAssertNoThrow(try client.syncShutdown()) }
 
-        let future = client.get("/").flatMapThrowing { _ in
+        let future = client.get("/", headers: ["connection": "keep-alive"]).map { response in
+            print(response)
         }
         XCTAssertNoThrow(try future.wait())
+    }
+}
+
+/// Channel Handler for serializing request header and data
+final class HTTPServerRequestSlowdown: ChannelInboundHandler, RemovableChannelHandler {
+    typealias InboundIn = HTTPServerRequestPart
+    typealias InboundOut = HTTPServerRequestPart
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let part = self.unwrapInboundIn(data)
+        switch part {
+        case .end:
+            context.eventLoop.scheduleTask(in: .seconds(100)) {
+                context.fireChannelRead(data)
+            }
+        default:
+            context.fireChannelRead(data)
+        }
     }
 }

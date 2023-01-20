@@ -239,6 +239,20 @@ public class HBXCTClient {
         }
     }
 
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        switch event {
+        case let evt as ChannelEvent where evt == .inputClosed:
+            context.close(promise: nil)
+
+        default:
+            context.fireUserInboundEventTriggered(event)
+        }
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.close(promise: nil)
+    }
+
     /// HTTP Task structure
     private struct HTTPTask {
         let request: HBXCTClient.Request
