@@ -256,6 +256,13 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
                 self.close(context: context)
             }
 
+        case let evt as IdleStateHandler.IdleStateEvent where evt == .write:
+            // if we get an idle write event and are not currently processing a request
+            if self.requestsInProgress == 0 {
+                self.responder.logger.trace("Idle write timeout, so close channel")
+                self.close(context: context)
+            }
+
         default:
             self.responder.logger.debug("Unhandled event \(event)")
             context.fireUserInboundEventTriggered(event)

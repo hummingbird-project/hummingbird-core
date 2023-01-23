@@ -53,9 +53,14 @@ public final class HBHTTPServer {
         self.childChannelHandlers = .init()
         // defaults to HTTP1
         self.httpChannelInitializer = HTTP1ChannelInitializer()
-        // add idle read handlers
-        if let idleReadTimeout = configuration.idleReadTimeout {
-            self.childChannelHandlers.addHandler(IdleStateHandler(readTimeout: idleReadTimeout))
+        // add idle read, write handlers
+        if let idleTimeoutConfiguration = configuration.idleTimeoutConfiguration {
+            self.childChannelHandlers.addHandler(
+                IdleStateHandler(
+                    readTimeout: idleTimeoutConfiguration.readTimeout,
+                    writeTimeout: idleTimeoutConfiguration.writeTimeout
+                )
+            )
         }
     }
 

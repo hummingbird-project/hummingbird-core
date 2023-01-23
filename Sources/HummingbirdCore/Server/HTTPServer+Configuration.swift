@@ -15,6 +15,19 @@
 import NIOCore
 
 extension HBHTTPServer {
+    /// Idle state handlder configuration
+    public struct IdleStateHandlerConfiguration {
+        /// timeout when reading a request
+        let readTimeout: TimeAmount
+        /// timeout since last writing a response
+        let writeTimeout: TimeAmount
+
+        public init(readTimeout: TimeAmount = .seconds(30), writeTimeout: TimeAmount = .minutes(3)) {
+            self.readTimeout = readTimeout
+            self.writeTimeout = writeTimeout
+        }
+    }
+
     /// HTTP server configuration
     public struct Configuration {
         /// Bind address for server
@@ -34,7 +47,7 @@ extension HBHTTPServer {
         /// Pipelining ensures that only one http request is processed at one time
         public let withPipeliningAssistance: Bool
         /// Idle state handler setup.
-        public let idleReadTimeout: TimeAmount?
+        public let idleTimeoutConfiguration: IdleStateHandlerConfiguration?
         #if canImport(Network)
         /// TLS options for NIO Transport services
         public let tlsOptions: TSTLSOptions
@@ -58,7 +71,7 @@ extension HBHTTPServer {
             reuseAddress: Bool = true,
             tcpNoDelay: Bool = true,
             withPipeliningAssistance: Bool = true,
-            idleReadTimeout: TimeAmount? = nil
+            idleTimeoutConfiguration: IdleStateHandlerConfiguration? = nil
         ) {
             self.address = address
             self.serverName = serverName
@@ -68,7 +81,7 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = tcpNoDelay
             self.withPipeliningAssistance = withPipeliningAssistance
-            self.idleReadTimeout = idleReadTimeout
+            self.idleTimeoutConfiguration = idleTimeoutConfiguration
             #if canImport(Network)
             self.tlsOptions = .none
             #endif
@@ -91,7 +104,7 @@ extension HBHTTPServer {
             maxStreamingBufferSize: Int = 1 * 1024 * 1024,
             reuseAddress: Bool = true,
             withPipeliningAssistance: Bool = true,
-            idleReadTimeout: TimeAmount? = nil,
+            idleTimeoutConfiguration: IdleStateHandlerConfiguration? = nil,
             tlsOptions: TSTLSOptions
         ) {
             self.address = address
@@ -102,7 +115,7 @@ extension HBHTTPServer {
             self.reuseAddress = reuseAddress
             self.tcpNoDelay = true
             self.withPipeliningAssistance = withPipeliningAssistance
-            self.idleReadTimeout = idleReadTimeout
+            self.idleTimeoutConfiguration = idleTimeoutConfiguration
             self.tlsOptions = tlsOptions
         }
         #endif
