@@ -52,7 +52,21 @@ public enum HBRequestBody: HBSendable {
         case .byteBuffer(let buffer):
             return eventLoop.makeSucceededFuture(buffer)
         case .stream(let streamer):
-            return streamer.consumeAll().hop(to: eventLoop)
+            return streamer.consumeAll(maxSize: .max).hop(to: eventLoop)
+        }
+    }
+
+    /// Provide body as a single ByteBuffer
+    /// - Parameters
+    ///   - maxSize: Maximum size of ByteBuffer to generate
+    ///   - eventLoop: EventLoop to use
+    /// - Returns: EventLoopFuture that will be fulfilled with ByteBuffer. If no body is include then return `nil`
+    public func consumeBody(maxSize: Int, on eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer?> {
+        switch self {
+        case .byteBuffer(let buffer):
+            return eventLoop.makeSucceededFuture(buffer)
+        case .stream(let streamer):
+            return streamer.consumeAll(maxSize: maxSize).hop(to: eventLoop)
         }
     }
 }
