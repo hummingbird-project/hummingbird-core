@@ -47,6 +47,7 @@ public enum HBRequestBody: HBSendable {
     /// Provide body as a single ByteBuffer
     /// - Parameter eventLoop: EventLoop to use
     /// - Returns: EventLoopFuture that will be fulfilled with ByteBuffer. If no body is include then return `nil`
+    @available(*, deprecated, message: "Use the version of `consumeBody` which sets a maximum size for the resultant ByteBuffer")
     public func consumeBody(on eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer?> {
         switch self {
         case .byteBuffer(let buffer):
