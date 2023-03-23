@@ -175,7 +175,7 @@ class HummingBirdCoreTests: XCTestCase {
                 let eventLoop = context.eventLoop
                 Task {
                     do {
-                        let buffer = try await request.body.consumeBody(maxSize: .max, on: eventLoop).get()
+                        let buffer = try await request.body.consumeBody(maxSize: .max)
                         guard let buffer = buffer else {
                             onComplete(.failure(HBHTTPError(.badRequest)))
                             return
