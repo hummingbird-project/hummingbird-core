@@ -211,7 +211,7 @@ class ByteBufferStreamerTests: XCTestCase {
         var buffer = originalBuffer
         let eventLoop = self.elg.next()
         let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024, maxStreamingBufferSize: 64 * 1024)
-        let finalBuffer = try eventLoop.flatSubmit {
+        let finalBuffer = try eventLoop.flatSubmit { () -> EventLoopFuture<ByteBuffer> in
             var finalBuffer = ByteBufferAllocator().buffer(capacity: 20000)
             var consumeRequests: [EventLoopFuture<HBStreamerOutput>] = (0..<5).map { _ in streamer.consume() }
             while let slice = buffer.readSlice(length: 2000) {
