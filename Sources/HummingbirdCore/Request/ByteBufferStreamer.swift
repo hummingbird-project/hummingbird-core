@@ -50,6 +50,17 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
         case byteBuffer(ByteBuffer)
         case error(Error)
         case end
+
+        var streamerOutputResult: Result<HBStreamerOutput, Error> {
+            switch self {
+            case .byteBuffer(let buffer):
+                return .success(.byteBuffer(buffer))
+            case .end:
+                return .success(.end)
+            case .error(let error):
+                return .failure(error)
+            }
+        }
     }
 
     /// Queue of promises for each ByteBuffer fed to the streamer. Last entry is always waiting for the next buffer or end tag
@@ -145,8 +156,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
                 self.backPressurePromise = self.eventLoop.makePromise()
             }
             if self.sizeFed > self.maxSize {
-                self.isFinishedFeeding = true
-                promise.fail(HBHTTPError(.payloadTooLarge))
+                self._feed(.error(HBHTTPError(.payloadTooLarge)))
             } else {
                 self.queue.append(self.eventLoop.makePromise())
                 promise.succeed(.byteBuffer(byteBuffer))
