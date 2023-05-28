@@ -248,6 +248,19 @@ class ByteBufferStreamerTests: XCTestCase {
         }
     }
 
+    func testCallingConsumeAfterEnd() throws {
+        let buffer = self.randomBuffer(size: 1)
+        let eventLoop = self.elg.next()
+        let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 32 * 1024)
+        streamer.feed(.byteBuffer(buffer))
+        streamer.feed(.end)
+        _ = try streamer.consume(on: eventLoop).wait()
+        let end1 = try streamer.consume(on: eventLoop).wait()
+        let end2 = try streamer.consume(on: eventLoop).wait()
+        XCTAssertEqual(end1, .end)
+        XCTAssertEqual(end2, .end)
+    }
+
     /// test error is propagated
     func testError() throws {
         struct MyError: Error {}

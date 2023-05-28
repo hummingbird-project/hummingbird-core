@@ -16,7 +16,7 @@ import Foundation
 import NIOCore
 
 /// Values returned when we consume the contents of the streamer
-public enum HBStreamerOutput: HBSendable {
+public enum HBStreamerOutput: HBSendable, Equatable {
     case byteBuffer(ByteBuffer)
     case end
 }
