@@ -63,8 +63,10 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
         }
     }
 
-    /// Queue of promises for each ByteBuffer fed to the streamer. Last entry is always waiting for the next buffer or end tag
-    var queue: CircularBuffer<EventLoopPromise<HBStreamerOutput>>
+    /// Queue of streamer inputs
+    var queue: CircularBuffer<FeedInput>
+    /// Queue of promises waiting for streamer inputs.
+    var waitingQueue: CircularBuffer<EventLoopPromise<FeedInput>>
     /// back pressure promise
     var backPressurePromise: EventLoopPromise<Void>?
     /// EventLoop everything is running on
@@ -81,13 +83,13 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
     var sizeFed: Int
     /// is request streamer finished
     var isFinishedFeeding: Bool
-    /// is request streamer finished
-    var isFinishedConsuming: Bool
+    /// if finished the last result sent
+    var finishedResult: FeedInput?
 
     public init(eventLoop: EventLoop, maxSize: Int, maxStreamingBufferSize: Int? = nil) {
         self.queue = .init()
+        self.waitingQueue = .init()
         self.backPressurePromise = nil
-        self.queue.append(eventLoop.makePromise())
         self.eventLoop = eventLoop
         self.sizeFed = 0
         self.currentSize = 0
@@ -95,7 +97,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
         self.maxStreamingBufferSize = maxStreamingBufferSize ?? maxSize
         self.onConsume = nil
         self.isFinishedFeeding = false
-        self.isFinishedConsuming = false
+        self.finishedResult = nil
     }
 
     /// Feed a ByteBuffer to the request, while applying back pressure
@@ -136,20 +138,16 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
         }
     }
 
-    /// Feed a ByteBuffer to the request
+    /// Feed a ByteBuffer to the stream
     /// - Parameter result: Bytebuffer or end tag
     private func _feed(_ result: FeedInput) {
-        self.eventLoop.assertInEventLoop()
+        // don't add more results to queue if we are finished
+        guard self.isFinishedFeeding == false else { return }
 
-        // queue most have at least one promise on it, or something has gone wrong
-        assert(self.queue.last != nil)
-        let promise = self.queue.last!
+        self.eventLoop.assertInEventLoop()
 
         switch result {
         case .byteBuffer(let byteBuffer):
-            // don't add more ByteBuffers to queue if we are finished
-            guard self.isFinishedFeeding == false else { return }
-
             self.sizeFed += byteBuffer.readableBytes
             self.currentSize += byteBuffer.readableBytes
             if self.currentSize > self.maxStreamingBufferSize {
@@ -158,22 +156,29 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
             if self.sizeFed > self.maxSize {
                 self._feed(.error(HBHTTPError(.payloadTooLarge)))
             } else {
-                self.queue.append(self.eventLoop.makePromise())
-                promise.succeed(.byteBuffer(byteBuffer))
+                // if there is a promise of the waiting queue then succeed that.
+                // otherwise add feed result to queue
+                if let promise = self.waitingQueue.popFirst() {
+                    promise.succeed(result)
+                } else {
+                    self.queue.append(result)
+                }
             }
-        case .error(let error):
+        case .error, .end:
             self.isFinishedFeeding = true
-            promise.fail(error)
-        case .end:
-            guard self.isFinishedFeeding == false else { return }
-            self.isFinishedFeeding = true
-            promise.succeed(.end)
+            // if waiting queue has any promises then complete all of those
+            // otherwise add feed result to queue
+            if self.waitingQueue.count > 0 {
+                for promise in self.waitingQueue {
+                    promise.succeed(result)
+                }
+            } else {
+                self.queue.append(result)
+            }
         }
     }
 
     /// Consume what has been fed to the request
-    ///
-    /// You cannot call this while another consume is in progress
     ///
     /// - Parameter eventLoop: EventLoop to return future on
     /// - Returns: Returns an EventLoopFuture that will be fulfilled with array of ByteBuffers that has so far been fed to th request body
@@ -251,7 +256,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
             }
             .cascadeFailure(to: promise)
         }
-        if self.queue.last != nil {
+        if self.waitingQueue.last != nil {
             _dropAll()
         } else {
             promise.succeed(())
@@ -263,14 +268,12 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
     /// - Returns: Returns an EventLoopFuture that will be fulfilled with array of ByteBuffers that has so far been fed to the request body
     ///     and whether we have consumed an end tag
     func consume() -> EventLoopFuture<HBStreamerOutput> {
-        if self.isFinishedConsuming { return self.eventLoop.makeSucceededFuture(.end) }
-        self.eventLoop.assertInEventLoop()
-        assert(self.queue.first != nil)
-        let promise = self.queue.first!
-        return promise.futureResult.map { result in
-            _ = self.queue.popFirst()
-
-            switch result {
+        if let finishedResult = self.finishedResult {
+            return self.eventLoop.makeCompletedFuture(finishedResult.streamerOutputResult)
+        }
+        // function for consuming feed input
+        func _consume(input: FeedInput) -> Result<HBStreamerOutput, Error> {
+            switch input {
             case .byteBuffer(let buffer):
                 self.currentSize -= buffer.readableBytes
                 if self.currentSize < self.maxStreamingBufferSize {
@@ -278,10 +281,23 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
                 }
             case .end:
                 assert(self.currentSize == 0)
-                self.isFinishedConsuming = true
+                self.finishedResult = input
+            default:
+                self.finishedResult = input
             }
             self.onConsume?(self)
-            return result
+            return input.streamerOutputResult
+        }
+        self.eventLoop.assertInEventLoop()
+        // if there is a result on the queue consume that otherwise create
+        // a promise and add it to the waiting queue and once that promise
+        // is complete consume the result
+        if let result = self.queue.popFirst() {
+            return self.eventLoop.makeCompletedFuture(_consume(input: result))
+        } else {
+            let promise = self.eventLoop.makePromise(of: FeedInput.self)
+            self.waitingQueue.append(promise)
+            return promise.futureResult.flatMapResult(_consume)
         }
     }
 
