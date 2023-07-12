@@ -335,7 +335,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// Feed a ByteBuffer to the request, while applying back pressure
     /// - Parameter result: Bytebuffer or end tag
     public func feed(buffer: ByteBuffer) -> EventLoopFuture<Void> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.feed(buffer: buffer, eventLoop: eventLoop)
         }
     }
@@ -343,7 +343,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// Feed a ByteBuffer to the request
     /// - Parameter result: Bytebuffer or end tag
     public func feed(_ result: FeedInput) {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.feed(result, eventLoop: eventLoop)
         }
     }
@@ -354,7 +354,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// - Returns: Returns an EventLoopFuture that will be fulfilled with array of ByteBuffers that has so far been fed to th request body
     ///     and whether we have consumed everything
     public func consume() -> EventLoopFuture<HBStreamerOutput> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.consume(eventLoop: eventLoop)
         }
     }
@@ -365,7 +365,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// - Returns: Returns an EventLoopFuture that will be fulfilled with array of ByteBuffers that has so far been fed to th request body
     ///     and whether we have consumed everything
     public func consume(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.consume(eventLoop: eventLoop)
         }.hop(to: eventLoop)
     }
@@ -376,7 +376,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     ///   - eventLoop: EventLoop to run on
     ///   - process: Closure to call to process ByteBuffer
     public func consumeAll(_ process: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.consumeAll(on: eventLoop, process)
         }
     }
@@ -387,7 +387,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     ///   - eventLoop: EventLoop to run on
     ///   - process: Closure to call to process ByteBuffer
     public func consumeAll(on eventLoop: EventLoop, _ process: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.consumeAll(on: eventLoop, process)
         }.hop(to: eventLoop)
     }
@@ -397,7 +397,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// - Parameters:
     ///   - eventLoop: EventLoop to run on
     func drop() -> EventLoopFuture<Void> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.drop(eventLoop: eventLoop)
         }
     }
@@ -406,7 +406,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// - Parameter maxSize: Maximum size for the resultant ByteBuffer
     /// - Returns: EventLoopFuture that will be fulfilled when all buffers are consumed
     func collate(maxSize: Int) -> EventLoopFuture<ByteBuffer?> {
-        self.state.onLoop { state, eventLoop in
+        self.state.runOnLoop { state, eventLoop in
             state.collate(maxSize: maxSize, eventLoop: eventLoop)
         }
     }
@@ -454,7 +454,7 @@ final class HBStaticStreamer: HBStreamerProtocol {
 extension HBStaticStreamer: @unchecked Sendable {}
 
 extension NIOLoopBoundBox {
-    @discardableResult func onLoop<NewValue>(_ callback: @escaping (Value, EventLoop) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+    @discardableResult func runOnLoop<NewValue>(_ callback: @escaping (Value, EventLoop) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
         if self._eventLoop.inEventLoop {
             return callback(self.value, self._eventLoop)
         } else {
@@ -464,7 +464,7 @@ extension NIOLoopBoundBox {
         }
     }
 
-    @discardableResult func onLoop<NewValue>(_ callback: @escaping (Value, EventLoop) throws -> NewValue) -> EventLoopFuture<NewValue> {
+    @discardableResult func runOnLoop<NewValue>(_ callback: @escaping (Value, EventLoop) throws -> NewValue) -> EventLoopFuture<NewValue> {
         if self._eventLoop.inEventLoop {
             return _eventLoop.makeCompletedFuture { try callback(self.value, self._eventLoop) }
         } else {
