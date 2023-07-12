@@ -297,10 +297,22 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
             _consumeAll(size: 0)
             return promise.futureResult
         }
+
+        func isBackpressureRequired(_ callback: @escaping () -> Void) -> Bool {
+            guard self.currentSize < self.maxStreamingBufferSize else {
+                self.onConsume = { streamer in
+                    if streamer.currentSize < streamer.maxStreamingBufferSize {
+                        callback()
+                    }
+                }
+                return true
+            }
+            return false
+        }
     }
 
     /// state wrapped in a NIOLoopBoubdBox to ensure state is only ever accessed from eventloop
-    let state: NIOLoopBoundBox<InternalState>
+    internal let state: NIOLoopBoundBox<InternalState>
 
     public init(eventLoop: EventLoop, maxSize: Int, maxStreamingBufferSize: Int? = nil) {
         self.state = .init(
@@ -397,6 +409,12 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
         self.state.onLoop { state, eventLoop in
             state.collate(maxSize: maxSize, eventLoop: eventLoop)
         }
+    }
+
+    /// Check if backpressure should be applied and provide callback to be called when it
+    /// is no longer needed
+    func isBackpressureRequired(_ callback: @escaping () -> Void) -> Bool {
+        self.state.value.isBackpressureRequired(callback)
     }
 }
 
