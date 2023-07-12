@@ -281,8 +281,8 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
 
     func read(context: ChannelHandlerContext) {
         if case .streamingBody(let streamer) = self.state {
-            guard streamer.currentSize < self.configuration.maxStreamingBufferSize else {
-                streamer.onConsume = { streamer in
+            guard streamer.state.value.currentSize < self.configuration.maxStreamingBufferSize else {
+                streamer.state.value.onConsume = { streamer in
                     if streamer.currentSize < self.configuration.maxStreamingBufferSize {
                         context.read()
                     }
