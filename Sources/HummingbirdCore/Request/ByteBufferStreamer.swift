@@ -16,13 +16,13 @@ import Foundation
 import NIOCore
 
 /// Values returned when we consume the contents of the streamer
-public enum HBStreamerOutput: HBSendable, Equatable {
+public enum HBStreamerOutput: Sendable, Equatable {
     case byteBuffer(ByteBuffer)
     case end
 }
 
 /// Protocol for objects providing a stream of ByteBuffers
-public protocol HBStreamerProtocol: HBSendable {
+public protocol HBStreamerProtocol: Sendable {
     /// Consume what has been fed to the streamer
     /// - Parameter eventLoop: EventLoop to return future on
     /// - Returns: Returns an EventLoopFuture that will be fulfilled with array of ByteBuffers that has so far been fed to the request body
