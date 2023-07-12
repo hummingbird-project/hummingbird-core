@@ -46,7 +46,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol {
     }
 
     /// Values we can feed the streamer with
-    public enum FeedInput {
+    public enum FeedInput: Sendable {
         case byteBuffer(ByteBuffer)
         case error(Error)
         case end
