@@ -202,7 +202,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
         /// - Parameters:
         ///   - eventLoop: EventLoop to run on
         ///   - process: Closure to call to process ByteBuffer
-        public func consumeAll(on eventLoop: EventLoop, _ process: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
+        func consumeAll(on eventLoop: EventLoop, _ process: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
             let promise = eventLoop.makePromise(of: Void.self)
             func _consumeAll(_ count: Int) {
                 self.consume(eventLoop: eventLoop).whenComplete { result in
