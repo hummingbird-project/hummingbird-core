@@ -113,8 +113,9 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
         /// - Parameter result: Bytebuffer or end tag
         func feed(buffer: ByteBuffer, eventLoop: EventLoop) -> EventLoopFuture<Void> {
             if let backPressurePromise = backPressurePromise {
+                let loopBoundSelf = NIOLoopBound(self, eventLoop: eventLoop)
                 return backPressurePromise.futureResult.always { _ in
-                    self.feed(.byteBuffer(buffer), eventLoop: eventLoop)
+                    loopBoundSelf.value.feed(.byteBuffer(buffer), eventLoop: eventLoop)
                 }
             } else {
                 self.feed(.byteBuffer(buffer), eventLoop: eventLoop)
@@ -168,7 +169,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
                 return eventLoop.makeCompletedFuture(finishedResult.streamerOutputResult)
             }
             // function for consuming feed input
-            func _consume(input: FeedInput) -> Result<HBStreamerOutput, Error> {
+            @Sendable func _consume(input: FeedInput) -> Result<HBStreamerOutput, Error> {
                 switch input {
                 case .byteBuffer(let buffer):
                     self.currentSize -= buffer.readableBytes
@@ -176,7 +177,8 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
                         self.backPressurePromise?.succeed(())
                     }
                 case .end:
-                    assert(self.currentSize == 0)
+                    let size = self.currentSize
+                    assert(size == 0)
                     self.finishedResult = input
                 default:
                     self.finishedResult = input
@@ -204,7 +206,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
         ///   - process: Closure to call to process ByteBuffer
         func consumeAll(on eventLoop: EventLoop, _ process: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
             let promise = eventLoop.makePromise(of: Void.self)
-            func _consumeAll(_ count: Int) {
+            @Sendable func _consumeAll(_ count: Int) {
                 self.consume(eventLoop: eventLoop).whenComplete { result in
                     switch result {
                     case .success(.byteBuffer(let buffer)):
@@ -245,7 +247,7 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
             self.isFinishedFeeding = true
 
             let promise = eventLoop.makePromise(of: Void.self)
-            func _dropAll() {
+            @Sendable func _dropAll() {
                 self.consume(eventLoop: eventLoop).map { output in
                     switch output {
                     case .byteBuffer:
@@ -270,8 +272,8 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
         /// - Returns: EventLoopFuture that will be fulfilled when all buffers are consumed
         func collate(maxSize: Int, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer?> {
             let promise = eventLoop.makePromise(of: ByteBuffer?.self)
-            var completeBuffer: ByteBuffer?
-            func _consumeAll(size: Int) {
+            let completeBuffer: NIOLoopBoundBox<ByteBuffer?> = .init(nil, eventLoop: eventLoop)
+            @Sendable func _consumeAll(size: Int) {
                 self.consume(eventLoop: eventLoop).whenComplete { result in
                     switch result {
                     case .success(.byteBuffer(var buffer)):
@@ -279,15 +281,15 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
                         if size > maxSize {
                             promise.fail(HBHTTPError(.payloadTooLarge))
                         }
-                        if completeBuffer != nil {
-                            completeBuffer!.writeBuffer(&buffer)
+                        if completeBuffer.value != nil {
+                            completeBuffer.value!.writeBuffer(&buffer)
                         } else {
-                            completeBuffer = buffer
+                            completeBuffer.value = buffer
                         }
                         _consumeAll(size: size)
 
                     case .success(.end):
-                        promise.succeed(completeBuffer)
+                        promise.succeed(completeBuffer.value)
 
                     case .failure(let error):
                         promise.fail(error)
@@ -456,7 +458,7 @@ final class HBStaticStreamer: HBStreamerProtocol {
 extension HBStaticStreamer: @unchecked Sendable {}
 
 extension NIOLoopBoundBox {
-    @discardableResult func runOnLoop<NewValue>(_ callback: @escaping (Value, EventLoop) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+    @discardableResult func runOnLoop<NewValue>(_ callback: @escaping @Sendable (Value, EventLoop) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
         if self._eventLoop.inEventLoop {
             return callback(self.value, self._eventLoop)
         } else {
@@ -466,7 +468,7 @@ extension NIOLoopBoundBox {
         }
     }
 
-    @discardableResult func runOnLoop<NewValue>(_ callback: @escaping (Value, EventLoop) throws -> NewValue) -> EventLoopFuture<NewValue> {
+    @discardableResult func runOnLoop<NewValue>(_ callback: @escaping @Sendable (Value, EventLoop) throws -> NewValue) -> EventLoopFuture<NewValue> {
         if self._eventLoop.inEventLoop {
             return _eventLoop.makeCompletedFuture { try callback(self.value, self._eventLoop) }
         } else {
