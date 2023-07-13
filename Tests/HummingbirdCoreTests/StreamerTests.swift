@@ -90,7 +90,7 @@ class ByteBufferStreamerTests: XCTestCase {
 
     func consumeStreamer(_ streamer: HBByteBufferStreamer, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         var consumeBuffer = ByteBuffer()
-        return streamer.consumeAll(on: eventLoop) { buffer in
+        return streamer.consumeAll { buffer in
             var buffer = buffer
             consumeBuffer.writeBuffer(&buffer)
             return eventLoop.makeSucceededVoidFuture()
@@ -99,7 +99,7 @@ class ByteBufferStreamerTests: XCTestCase {
 
     func consumeStreamerWithDelays(_ streamer: HBByteBufferStreamer, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         var consumeBuffer = ByteBuffer()
-        return streamer.consumeAll(on: eventLoop) { buffer in
+        return streamer.consumeAll { buffer in
             var buffer = buffer
             consumeBuffer.writeBuffer(&buffer)
             return eventLoop.scheduleTask(in: .microseconds(Int64.random(in: 0..<100))) {}.futureResult
@@ -276,11 +276,11 @@ class ByteBufferStreamerTests: XCTestCase {
             streamer.feed(.byteBuffer(buffer))
             streamer.feed(.end)
 
-            return streamer.consume(on: eventLoop).flatMap { _ in
-                return streamer.consume(on: eventLoop)
+            return streamer.consume().flatMap { _ in
+                return streamer.consume()
             }.flatMap { (end: HBStreamerOutput) in
                 XCTAssertEqual(end, .end)
-                return streamer.consume(on: eventLoop)
+                return streamer.consume()
             }.map { (end: HBStreamerOutput) in
                 XCTAssertEqual(end, .end)
             }

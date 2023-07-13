@@ -364,9 +364,10 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// - Parameter eventLoop: EventLoop to return future on
     /// - Returns: Returns an EventLoopFuture that will be fulfilled with array of ByteBuffers that has so far been fed to th request body
     ///     and whether we have consumed everything
+    @available(*, deprecated, message: "Use consume(). If you need to jump to another EventLoop use hop(to:).")
     public func consume(on eventLoop: EventLoop) -> EventLoopFuture<HBStreamerOutput> {
-        self.state.runOnLoop { state, eventLoop in
-            state.consume(eventLoop: eventLoop)
+        self.state.runOnLoop { state, stateEventLoop in
+            state.consume(eventLoop: stateEventLoop)
         }.hop(to: eventLoop)
     }
 
@@ -386,9 +387,10 @@ public final class HBByteBufferStreamer: HBStreamerProtocol, Sendable {
     /// - Parameters:
     ///   - eventLoop: EventLoop to run on
     ///   - process: Closure to call to process ByteBuffer
+    @available(*, deprecated, message: "Use consumeAll(_:). If you need to jump to another EventLoop use hop(to:).")
     public func consumeAll(on eventLoop: EventLoop, _ process: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        self.state.runOnLoop { state, eventLoop in
-            state.consumeAll(on: eventLoop, process)
+        self.state.runOnLoop { state, stateEventLoop in
+            state.consumeAll(on: stateEventLoop, process)
         }.hop(to: eventLoop)
     }
 
