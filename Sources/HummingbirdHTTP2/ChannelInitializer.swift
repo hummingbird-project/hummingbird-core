@@ -58,8 +58,6 @@ struct HTTP2UpgradeChannel: HBChannelInitializer {
     let sslContext: NIOSSLContext
 
     public init(tlsConfiguration: TLSConfiguration, upgraders: [HTTPServerProtocolUpgrader] = []) throws {
-        var tlsConfiguration = tlsConfiguration
-        tlsConfiguration.applicationProtocols.append("h2")
         self.sslContext = try NIOSSLContext(configuration: tlsConfiguration)
         self.http1 = .init(upgraders: upgraders)
         self.http2 = try .init(tlsConfiguration: nil)
@@ -79,5 +77,11 @@ struct HTTP2UpgradeChannel: HBChannelInitializer {
                 self.http1.initialize(channel: channel, childHandlers: childHandlers, configuration: configuration)
             }
         )
+    }
+
+    ///  Add protocol upgrader to channel initializer
+    /// - Parameter upgrader: HTTP server protocol upgrader to add
+    public mutating func addProtocolUpgrader(_ upgrader: HTTPServerProtocolUpgrader) {
+        self.http1.addProtocolUpgrader(upgrader)
     }
 }

@@ -39,6 +39,12 @@ public struct HTTP1WithTLSChannel: HBChannelInitializer {
         }
     }
 
-    let upgraders: [HTTPServerProtocolUpgrader]
+    ///  Add protocol upgrader to channel initializer
+    /// - Parameter upgrader: HTTP server protocol upgrader to add
+    public mutating func addProtocolUpgrader(_ upgrader: HTTPServerProtocolUpgrader) {
+        self.upgraders.append(upgrader)
+    }
+
     let sslContext: NIOSSLContext
+    var upgraders: [HTTPServerProtocolUpgrader]
 }

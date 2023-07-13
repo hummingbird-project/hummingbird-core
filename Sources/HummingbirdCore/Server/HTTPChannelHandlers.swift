@@ -15,21 +15,21 @@
 import NIOCore
 
 /// Stores channel handlers used in HTTP server
-struct HBHTTPChannelHandlers {
+struct HBHTTPChannelHandlers: Sendable {
     /// Initialize `HBHTTPChannelHandlers`
     init() {
         self.handlers = []
     }
 
     /// Add autoclosure that creates a ChannelHandler
-    public mutating func addHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) {
+    public mutating func addHandler(_ handler: @autoclosure @escaping @Sendable () -> any RemovableChannelHandler) {
         self.handlers.append(handler)
     }
 
     /// Return array of ChannelHandlers
-    public func getHandlers() -> [RemovableChannelHandler] {
+    public func getHandlers() -> [any RemovableChannelHandler] {
         return self.handlers.map { $0() }
     }
 
-    private var handlers: [() -> RemovableChannelHandler]
+    private var handlers: [@Sendable () -> any RemovableChannelHandler]
 }

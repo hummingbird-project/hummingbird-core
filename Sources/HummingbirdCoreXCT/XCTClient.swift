@@ -89,6 +89,7 @@ public struct HBXCTClient: Sendable {
                             return channel.pipeline.addHandlers(handlers)
                         }
                 }
+                .connectTimeout(.seconds(5))
                 .connect(host: self.host, port: self.port)
                 .cascade(to: self.channelPromise)
         } catch {

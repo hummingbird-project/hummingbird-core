@@ -19,30 +19,10 @@ public struct HelloResponder: HBHTTPResponder {
     }
 }
 
-/// Setup child channel for HTTP1, with additional channel handlers
-public struct TestHTTP1Channel: HBChannelInitializer {
-    let additionalChannels: () -> [RemovableChannelHandler]
-    public init(additionalChannels: @escaping @autoclosure () -> [RemovableChannelHandler]) {
-        self.additionalChannels = additionalChannels
-    }
-
-    /// Initialize HTTP1 channel
-    /// - Parameters:
-    ///   - channel: channel
-    ///   - childHandlers: Channel handlers to add
-    ///   - configuration: server configuration
-    public func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void> {
-        return channel.eventLoop.makeCompletedFuture {
-            let handlers = self.additionalChannels() + childHandlers
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                withPipeliningAssistance: configuration.withPipeliningAssistance,
-                withErrorHandling: true
-            )
-            try channel.pipeline.syncOperations.addHandlers(handlers)
-        }
-    }
-}
-
+/// Helper function for test a server
+///
+/// Creates test client, runs test function abd ensures everything is
+/// shutdown correctly
 public func testServer(
     _ server: HBHTTPServer,
     clientConfiguration: HBXCTClient.Configuration = .init(),
@@ -60,13 +40,17 @@ public func testServer(
         try await test(client)
     } catch {
         try await client.shutdown()
-        try await server.stop()
+        try await server.shutdownGracefully()
         throw error
     }
     try await client.shutdown()
-    try await server.stop()
+    try await server.shutdownGracefully()
 }
 
+/// Run process with a timeout
+/// - Parameters:
+///   - timeout: Amount of time before timeout error is thrown
+///   - process: Process to run
 public func withTimeout(_ timeout: TimeAmount, _ process: @escaping @Sendable () async throws -> Void) async throws {
     try await withThrowingTaskGroup(of: Void.self) { group in
         group.addTask {

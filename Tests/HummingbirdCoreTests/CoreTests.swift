@@ -21,10 +21,7 @@ import NIOEmbedded
 import NIOHTTP1
 import NIOPosix
 import NIOTransportServices
-#if canImport(Network)
-import Network
-import NIOTransportServices
-#endif
+import ServiceLifecycle
 import XCTest
 
 class HummingBirdCoreTests: XCTestCase {
@@ -365,10 +362,9 @@ class HummingBirdCoreTests: XCTestCase {
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
             responder: Responder(),
-            childChannelInitializer: TestHTTP1Channel(additionalChannels: [SlowInputChannelHandler()]),
+            additionalChannelHandlers: [SlowInputChannelHandler()],
             logger: Logger(label: "HB")
         )
-
         try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
@@ -402,10 +398,9 @@ class HummingBirdCoreTests: XCTestCase {
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
             responder: Responder(),
-            childChannelInitializer: TestHTTP1Channel(additionalChannels: [CreateErrorHandler()]),
+            additionalChannelHandlers: [CreateErrorHandler()],
             logger: Logger(label: "HB")
         )
-
         try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 32)
             let response = try await client.post("/", body: buffer)
@@ -449,10 +444,9 @@ class HummingBirdCoreTests: XCTestCase {
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
             responder: Responder(),
-            childChannelInitializer: TestHTTP1Channel(additionalChannels: [BreakupHTTPBodyChannelHandler()]),
+            additionalChannelHandlers: [BreakupHTTPBodyChannelHandler()],
             logger: Logger(label: "HB")
         )
-
         try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 16384)
             let response = try await client.post("/", body: buffer)
@@ -601,9 +595,9 @@ class HummingBirdCoreTests: XCTestCase {
         }
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
-            configuration: .init(address: .hostname(port: 0), idleTimeoutConfiguration: .init(readTimeout: .seconds(1))),
+            configuration: .init(address: .hostname(port: 0)),
             responder: HelloResponder(),
-            childChannelInitializer: TestHTTP1Channel(additionalChannels: [HTTPServerIncompleteRequest()]),
+            additionalChannelHandlers: [HTTPServerIncompleteRequest(), IdleStateHandler(readTimeout: .seconds(1))],
             logger: Logger(label: "HB")
         )
         try await testServer(server) { client in
@@ -622,8 +616,9 @@ class HummingBirdCoreTests: XCTestCase {
     func testWriteIdleTimeout() async throws {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
-            configuration: .init(address: .hostname(port: 0), idleTimeoutConfiguration: .init(writeTimeout: .seconds(1))),
+            configuration: .init(address: .hostname(port: 0)),
             responder: HelloResponder(),
+            additionalChannelHandlers: [IdleStateHandler(writeTimeout: .seconds(1))],
             logger: Logger(label: "HB")
         )
         try await testServer(server) { client in
@@ -632,6 +627,62 @@ class HummingBirdCoreTests: XCTestCase {
                 let channel = try await client.channelPromise.futureResult.get()
                 try await channel.closeFuture.get()
             }
+        }
+    }
+
+    func testServerAsService() async throws {
+        final class Barrier: @unchecked Sendable {
+            let cont: AsyncStream<Void>.Continuation
+            let stream: AsyncStream<Void>
+
+            init() {
+                var cont: AsyncStream<Void>.Continuation!
+                self.stream = AsyncStream<Void> { cont = $0 }
+                self.cont = cont
+            }
+
+            func wait() async {
+                await self.stream.first { _ in true }
+            }
+
+            func signal() {
+                self.cont.yield()
+            }
+        }
+
+        let barrier = Barrier()
+        var logger = Logger(label: "HB")
+        logger.logLevel = .trace
+        let server = HBHTTPServer(
+            group: Self.eventLoopGroup,
+            configuration: .init(address: .hostname(port: 0)),
+            responder: HelloResponder(),
+            onServerRunning: { barrier.signal() },
+            logger: logger
+        )
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let serviceGroup = await ServiceGroup(
+                services: [server],
+                configuration: .init(gracefulShutdownSignals: [.sigterm, .sigint]),
+                logger: server.logger
+            )
+            group.addTask {
+                try await serviceGroup.run()
+            }
+            await barrier.wait()
+            let client = await HBXCTClient(
+                host: "localhost",
+                port: server.port!,
+                configuration: .init(timeout: .seconds(2)),
+                eventLoopGroupProvider: .createNew
+            )
+            client.connect()
+            group.addTask {
+                _ = try await client.get("/")
+            }
+            try await group.next()
+            await serviceGroup.triggerGracefulShutdown()
+            try await client.shutdown()
         }
     }
 }

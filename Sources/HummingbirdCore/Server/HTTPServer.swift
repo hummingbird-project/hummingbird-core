@@ -27,7 +27,8 @@ public actor HBHTTPServer {
     enum State: CustomStringConvertible {
         case initial(
             responder: HBHTTPResponder,
-            childChannelInitializer: HBChannelInitializer
+            childChannelInitializer: HBChannelInitializer,
+            onServerRunning: @Sendable () async -> Void
         )
         case starting
         case running(
@@ -64,6 +65,8 @@ public actor HBHTTPServer {
     public let logger: Logger
     /// Server configuration
     public let configuration: Configuration
+    /// Additional channel handlers
+    var additionalChannelHandlers: @Sendable () -> [any RemovableChannelHandler]
 
     /// HTTP server errors
     public enum Error: Swift.Error {
@@ -86,11 +89,18 @@ public actor HBHTTPServer {
         configuration: Configuration,
         responder: HBHTTPResponder,
         childChannelInitializer: HBChannelInitializer = HTTP1Channel(),
+        additionalChannelHandlers: @autoclosure @escaping @Sendable () -> [any RemovableChannelHandler] = [],
+        onServerRunning: @escaping @Sendable () async -> Void = {},
         logger: Logger
     ) {
         self.eventLoopGroup = group
         self.configuration = configuration
-        self.state = .initial(responder: responder, childChannelInitializer: childChannelInitializer)
+        self.state = .initial(
+            responder: responder,
+            childChannelInitializer: childChannelInitializer,
+            onServerRunning: onServerRunning
+        )
+        self.additionalChannelHandlers = additionalChannelHandlers
         self.logger = logger
     }
 
@@ -99,7 +109,7 @@ public actor HBHTTPServer {
     /// - Returns: EventLoopFuture that is fulfilled when server has started
     public func start() async throws {
         switch self.state {
-        case .initial(let responder, let childChannelInitializer):
+        case .initial(let responder, let childChannelInitializer, let onServerRunning):
             self.state = .starting
             let (channel, quiescingHelper) = try await self.makeServer(
                 httpChannelInitializer: childChannelInitializer,
@@ -111,6 +121,7 @@ public actor HBHTTPServer {
                 preconditionFailure("We should only be running once")
 
             case .starting:
+                await onServerRunning()
                 self.state = .running(channel: channel, quiescingHelper: quiescingHelper)
 
             case .shuttingDown, .shutdown:
@@ -128,9 +139,9 @@ public actor HBHTTPServer {
         }
     }
 
-    /// Stop HTTP server
+    /// Shutdown HTTP server
     /// - Returns: EventLoopFuture that is fulfilled when server has stopped
-    public func stop() async throws {
+    public func shutdownGracefully() async throws {
         switch self.state {
         case .initial, .starting:
             self.state = .shutdown
@@ -173,6 +184,7 @@ public actor HBHTTPServer {
         }
     }
 
+    /// The port the server is bound to.
     public var port: Int? {
         if case .running(let channel, _) = self.state {
             return channel.localAddress?.port
@@ -183,25 +195,14 @@ public actor HBHTTPServer {
     }
 
     private func makeServer(httpChannelInitializer: HBChannelInitializer, responder: HBHTTPResponder) async throws -> (Channel, ServerQuiescingHelper) {
-        let idleTimeoutConfiguration = self.configuration.idleTimeoutConfiguration
         let handlerConfiguration = HBHTTPServerHandler.Configuration(
             maxUploadSize: self.configuration.maxUploadSize,
             maxStreamingBufferSize: self.configuration.maxStreamingBufferSize,
             serverName: self.configuration.serverName
         )
+        let additionalChannelHandlers = self.additionalChannelHandlers
         @Sendable func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
-            let childHandlers: [RemovableChannelHandler]
-            if let idleTimeoutConfiguration = idleTimeoutConfiguration {
-                childHandlers = [
-                    IdleStateHandler(
-                        readTimeout: idleTimeoutConfiguration.readTimeout,
-                        writeTimeout: idleTimeoutConfiguration.writeTimeout
-                    ),
-                    HBHTTPServerHandler(responder: responder, configuration: handlerConfiguration),
-                ]
-            } else {
-                childHandlers = [HBHTTPServerHandler(responder: responder, configuration: handlerConfiguration)]
-            }
+            let childHandlers = additionalChannelHandlers() + [HBHTTPServerHandler(responder: responder, configuration: handlerConfiguration)]
             return httpChannelInitializer.initialize(channel: channel, childHandlers: childHandlers, configuration: self.configuration)
         }
 
@@ -228,7 +229,7 @@ public actor HBHTTPServer {
         switch self.configuration.address {
         case .hostname(let host, let port):
             channel = try await bootstrap.bind(host: host, port: port).get()
-            self.logger.info("Server started and listening on \(host):\(port)")
+            self.logger.info("Server started and listening on \(host):\(channel.localAddress?.port ?? port)")
 
         case .unixDomainSocket(let path):
             channel = try await bootstrap.bind(unixDomainSocketPath: path).get()
