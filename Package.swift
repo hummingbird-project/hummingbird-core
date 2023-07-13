@@ -1,6 +1,7 @@
 // swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import Foundation
 import PackageDescription
 
 let package = Package(
@@ -54,14 +55,19 @@ let package = Package(
             dependencies:
             [
                 .byName(name: "HummingbirdCore"),
+                .byName(name: "HummingbirdTLS"),
                 .byName(name: "HummingbirdCoreXCT"),
                 .product(name: "NIOEmbedded", package: "swift-nio"),
             ],
             resources: [.process("Certificates")]
         ),
-        .testTarget(name: "HummingbirdTLSTests", dependencies: [
-            .byName(name: "HummingbirdTLS"),
-            .byName(name: "HummingbirdCoreXCT"),
-        ]),
     ]
 )
+
+if ProcessInfo.processInfo.environment["STRICT_CONCURRENCY"] == "true" {
+    for target in package.targets {
+        if !target.isTest {
+            target.swiftSettings = [.unsafeFlags(["-Xfrontend", "-warn-concurrency"])]
+        }
+    }
+}

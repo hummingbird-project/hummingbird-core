@@ -1,33 +1,14 @@
-//===----------------------------------------------------------------------===//
-//
-// This source file is part of the Hummingbird server framework project
-//
-// Copyright (c) 2021-2021 the Hummingbird authors
-// Licensed under Apache License v2.0
-//
-// See LICENSE.txt for license information
-// See hummingbird/CONTRIBUTORS.txt for the list of Hummingbird authors
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-//===----------------------------------------------------------------------===//
-
+import HummingbirdCore
 import NIOCore
 import NIOHTTP1
+import NIOSSL
 
-/// HTTPServer child channel initializer protocol
-public protocol HBChannelInitializer {
-    /// Initialize channel
-    /// - Parameters:
-    ///   - channel: channel
-    ///   - childHandlers: Channel handlers to add
-    ///   - configuration: server configuration
-    func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void>
-}
-
-/// Setup child channel for HTTP1
-public struct HTTP1Channel: HBChannelInitializer {
-    public init(upgraders: [HTTPServerProtocolUpgrader] = []) {
+/// Setup child channel for HTTP1 with TLS
+public struct HTTP1WithTLSChannel: HBChannelInitializer {
+    public init(tlsConfiguration: TLSConfiguration, upgraders: [HTTPServerProtocolUpgrader] = []) throws {
+        var tlsConfiguration = tlsConfiguration
+        tlsConfiguration.applicationProtocols.append("http/1.1")
+        self.sslContext = try NIOSSLContext(configuration: tlsConfiguration)
         self.upgraders = upgraders
     }
 
@@ -48,6 +29,7 @@ public struct HTTP1Channel: HBChannelInitializer {
             })
         }
         return channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.addHandler(NIOSSLServerHandler(context: self.sslContext))
             try channel.pipeline.syncOperations.configureHTTPServerPipeline(
                 withPipeliningAssistance: configuration.withPipeliningAssistance,
                 withServerUpgrade: serverUpgrade,
@@ -58,4 +40,5 @@ public struct HTTP1Channel: HBChannelInitializer {
     }
 
     let upgraders: [HTTPServerProtocolUpgrader]
+    let sslContext: NIOSSLContext
 }

@@ -29,7 +29,7 @@ extension HBHTTPServer {
     }
 
     /// HTTP server configuration
-    public struct Configuration {
+    public struct Configuration: Sendable {
         /// Bind address for server
         public let address: HBBindAddress
         /// Server name to return in "server" header

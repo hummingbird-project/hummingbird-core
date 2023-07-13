@@ -26,6 +26,12 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     typealias OutboundIn = Never
     typealias OutboundOut = HTTPServerResponsePart
 
+    struct Configuration: Sendable {
+        let maxUploadSize: Int
+        let maxStreamingBufferSize: Int
+        let serverName: String?
+    }
+
     enum State {
         case idle
         case head(HTTPRequestHead)
@@ -35,7 +41,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     }
 
     let responder: HBHTTPResponder
-    let configuration: HBHTTPServer.Configuration
+    let configuration: Configuration
     var requestsInProgress: Int
     var closeAfterResponseWritten: Bool
     var propagatedError: Error?
@@ -43,7 +49,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     /// handler state
     var state: State
 
-    init(responder: HBHTTPResponder, configuration: HBHTTPServer.Configuration) {
+    init(responder: HBHTTPResponder, configuration: Configuration) {
         self.responder = responder
         self.configuration = configuration
         self.requestsInProgress = 0

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIOCore
 import NIOExtras
 import NIOHTTP1
@@ -22,17 +23,46 @@ import NIOTransportServices
 #endif
 
 /// HTTP server class
-public final class HBHTTPServer {
+public actor HBHTTPServer {
+    enum State: CustomStringConvertible {
+        case initial(
+            childChannelInitializer: HBChannelInitializer
+        )
+        case starting
+        case running(
+            channel: Channel,
+            quiescingHelper: ServerQuiescingHelper
+        )
+        case shuttingDown(shutdownPromise: EventLoopPromise<Void>)
+        case shutdown
+
+        var description: String {
+            switch self {
+            case .initial:
+                return "initial"
+            case .starting:
+                return "starting"
+            case .running:
+                return "running"
+            case .shuttingDown:
+                return "shuttingDown"
+            case .shutdown:
+                return "shutdown"
+            }
+        }
+    }
+
+    /// Server state
+    var state: State {
+        didSet { self.logger.trace("Server State: \(self.state)") }
+    }
+
     /// EventLoopGroup used by server
     public let eventLoopGroup: EventLoopGroup
+    /// Logger used by server
+    public let logger: Logger
     /// Server configuration
     public let configuration: Configuration
-    /// object initializing HTTP child handlers. This defaults to creating an HTTP1 channel
-    public var httpChannelInitializer: HBChannelInitializer
-    /// Server channel
-    public var channel: Channel?
-
-    var quiesce: ServerQuiescingHelper?
 
     /// HTTP server errors
     public enum Error: Swift.Error {
@@ -40,74 +70,151 @@ public final class HBHTTPServer {
         case serverNotRunning
         /// the current connection is closing
         case connectionClosing
+        /// the server is shutting down
+        case serverShuttingDown
+        /// the server has shutdown
+        case serverShutdown
     }
 
     /// Initialize HTTP server
     /// - Parameters:
     ///   - group: EventLoopGroup server uses
     ///   - configuration: Configuration for server
-    public init(group: EventLoopGroup, configuration: Configuration) {
+    public init(
+        group: EventLoopGroup,
+        configuration: Configuration,
+        childChannelInitializer: HBChannelInitializer = HTTP1Channel(),
+        logger: Logger
+    ) {
         self.eventLoopGroup = group
         self.configuration = configuration
-        self.quiesce = nil
-        self.childChannelHandlers = .init()
-        // defaults to HTTP1
-        self.httpChannelInitializer = HTTP1ChannelInitializer()
-        // add idle read, write handlers
-        if let idleTimeoutConfiguration = configuration.idleTimeoutConfiguration {
-            self.childChannelHandlers.addHandler(
-                IdleStateHandler(
-                    readTimeout: idleTimeoutConfiguration.readTimeout,
-                    writeTimeout: idleTimeoutConfiguration.writeTimeout
-                )
-            )
-        }
-    }
-
-    /// Add TLS handler. Need to provide a closure so new instance of these handlers are
-    /// created for each child channel
-    /// - Parameters:
-    ///   - handler: autoclosure generating handler
-    ///   - position: position to place channel handler
-    @discardableResult public func addTLSChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self {
-        self.tlsChannelHandler = handler
-        return self
-    }
-
-    /// Append to list of `ChannelHandler`s to be added to server child channels. Need to provide a closure so new instance of these handlers are
-    /// created for each child channel
-    /// - Parameters:
-    ///   - handler: autoclosure generating handler
-    ///   - position: position to place channel handler
-    @discardableResult public func addChannelHandler(_ handler: @autoclosure @escaping () -> RemovableChannelHandler) -> Self {
-        self.childChannelHandlers.addHandler(handler())
-        return self
+        self.state = .initial(childChannelInitializer: childChannelInitializer)
+        self.logger = logger
     }
 
     /// Start server
     /// - Parameter responder: Object that provides responses to requests sent to the server
     /// - Returns: EventLoopFuture that is fulfilled when server has started
-    public func start(responder: HBHTTPResponder) -> EventLoopFuture<Void> {
-        func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
-            let tlsChannelHandler = self.tlsChannelHandler?()
-            return channel.pipeline.addHandlers(tlsChannelHandler.map { [$0] } ?? []).flatMap {
-                let childHandlers = self.getChildChannelHandlers(responder: responder)
-                return self.httpChannelInitializer.initialize(channel: channel, childHandlers: childHandlers, configuration: self.configuration)
+    public func start(responder: HBHTTPResponder) async throws {
+        switch self.state {
+        case .initial(let childChannelInitializer):
+            self.state = .starting
+            let (channel, quiescingHelper) = try await self.makeServer(
+                httpChannelInitializer: childChannelInitializer,
+                responder: responder
+            )
+            // check state again
+            switch self.state {
+            case .initial, .running:
+                preconditionFailure("We should only be running once")
+
+            case .starting:
+                self.state = .running(channel: channel, quiescingHelper: quiescingHelper)
+
+            case .shuttingDown, .shutdown:
+                try await channel.close()
             }
+
+        case .starting, .running:
+            fatalError("Unexpected state")
+
+        case .shuttingDown:
+            throw Error.serverShuttingDown
+
+        case .shutdown:
+            throw Error.serverShutdown
+        }
+    }
+
+    /// Stop HTTP server
+    /// - Returns: EventLoopFuture that is fulfilled when server has stopped
+    public func stop() async throws {
+        switch self.state {
+        case .initial, .starting:
+            self.state = .shutdown
+
+        case .running(_, let quiescingHelper):
+            let promise = self.eventLoopGroup.next().makePromise(of: Void.self)
+            quiescingHelper.initiateShutdown(promise: promise)
+            self.state = .shuttingDown(shutdownPromise: promise)
+            try await promise.futureResult.get()
+
+            // We need to check the state here again since we just awaited above
+            switch self.state {
+            case .initial, .starting, .running, .shutdown:
+                fatalError("Unexpected state")
+
+            case .shuttingDown:
+                self.state = .shutdown
+            }
+
+        case .shuttingDown(let shutdownPromise):
+            try await shutdownPromise.futureResult.get()
+
+        case .shutdown:
+            break
+        }
+    }
+
+    /// Wait on server. This won't return until `stop` has been called
+    /// - Throws: `Error.serverNotRunning` if server hasn't fully started
+    public func wait() async throws {
+        switch self.state {
+        case .initial, .starting:
+            throw Error.serverNotRunning
+        case .running(let channel, _):
+            try await channel.closeFuture.get()
+        case .shuttingDown(let shutdownPromise):
+            try await shutdownPromise.futureResult.get()
+        case .shutdown:
+            break
+        }
+    }
+
+    public var port: Int? {
+        if case .running(let channel, _) = self.state {
+            return channel.localAddress?.port
+        } else if self.configuration.address.port != 0 {
+            return self.configuration.address.port
+        }
+        return nil
+    }
+
+    private func makeServer(httpChannelInitializer: HBChannelInitializer, responder: HBHTTPResponder) async throws -> (Channel, ServerQuiescingHelper) {
+        let idleTimeoutConfiguration = self.configuration.idleTimeoutConfiguration
+        let handlerConfiguration = HBHTTPServerHandler.Configuration(
+            maxUploadSize: self.configuration.maxUploadSize,
+            maxStreamingBufferSize: self.configuration.maxStreamingBufferSize,
+            serverName: self.configuration.serverName
+        )
+        @Sendable func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
+            let childHandlers: [RemovableChannelHandler]
+            if let idleTimeoutConfiguration = idleTimeoutConfiguration {
+                childHandlers = [
+                    IdleStateHandler(
+                        readTimeout: idleTimeoutConfiguration.readTimeout,
+                        writeTimeout: idleTimeoutConfiguration.writeTimeout
+                    ),
+                    HBHTTPServerHandler(responder: responder, configuration: handlerConfiguration),
+                ]
+            } else {
+                childHandlers = [HBHTTPServerHandler(responder: responder, configuration: handlerConfiguration)]
+            }
+            return httpChannelInitializer.initialize(channel: channel, childHandlers: childHandlers, configuration: self.configuration)
         }
 
         let quiesce = ServerQuiescingHelper(group: self.eventLoopGroup)
-        self.quiesce = quiesce
+
         #if canImport(Network)
         let bootstrap: HTTPServerBootstrap
-        if #available(macOS 10.14, iOS 12, tvOS 12, *), let tsBootstrap = self.createTSBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer) {
+        if let tsBootstrap = self.createTSBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer) {
             bootstrap = tsBootstrap
         } else {
             #if os(iOS) || os(tvOS)
             responder.logger.warning("Running BSD sockets on iOS or tvOS is not recommended. Please use NIOTSEventLoopGroup, to run with the Network framework")
             #endif
             if #available(macOS 10.14, iOS 12, tvOS 12, *), self.configuration.tlsOptions.options != nil {
-                responder.logger.warning("tlsOptions set in Configuration will not be applied to a BSD sockets server. Please use NIOTSEventLoopGroup, to run with the Network framework")
+                logger.warning("tlsOptions set in Configuration will not be applied to a BSD sockets server. Please use NIOTSEventLoopGroup, to run with the Network framework")
             }
             bootstrap = self.createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
         }
@@ -115,69 +222,21 @@ public final class HBHTTPServer {
         let bootstrap = self.createSocketsBootstrap(quiesce: quiesce, childChannelInitializer: childChannelInitializer)
         #endif
 
-        let bindFuture: EventLoopFuture<Void>
+        let channel: Channel
         switch self.configuration.address {
         case .hostname(let host, let port):
-            bindFuture = bootstrap.bind(host: host, port: port)
-                .map { channel in
-                    self.channel = channel
-                    responder.logger.info("Server started and listening on \(host):\(port)")
-                }
+            channel = try await bootstrap.bind(host: host, port: port).get()
+            self.logger.info("Server started and listening on \(host):\(port)")
+
         case .unixDomainSocket(let path):
-            bindFuture = bootstrap.bind(unixDomainSocketPath: path)
-                .map { channel in
-                    self.channel = channel
-                    responder.logger.info("Server started and listening on socket path \(path)")
-                }
+            channel = try await bootstrap.bind(unixDomainSocketPath: path).get()
+            self.logger.info("Server started and listening on socket path \(path)")
         }
-
-        return bindFuture
-            .flatMapErrorThrowing { error in
-                quiesce.initiateShutdown(promise: nil)
-                self.quiesce = nil
-                throw error
-            }
-    }
-
-    /// Stop HTTP server
-    /// - Returns: EventLoopFuture that is fulfilled when server has stopped
-    public func stop() -> EventLoopFuture<Void> {
-        let promise = self.eventLoopGroup.next().makePromise(of: Void.self)
-        if let quiesce = self.quiesce {
-            quiesce.initiateShutdown(promise: promise)
-            self.quiesce = nil
-        } else {
-            promise.succeed(())
-        }
-        return promise.futureResult.map { _ in self.channel = nil }
-    }
-
-    /// Wait on server. This won't return until `stop` has been called
-    /// - Throws: `Error.serverNotRunning` if server hasn't fully started
-    public func wait() throws {
-        guard let channel = self.channel else { throw Error.serverNotRunning }
-        try channel.closeFuture.wait()
-    }
-
-    /// Return array of child handlers added after HTTP handlers. Used by HBApplication.xct
-    /// - Parameter responder: final responder to user
-    public func getChildChannelHandlers(responder: HBHTTPResponder) -> [RemovableChannelHandler] {
-        return self.childChannelHandlers.getHandlers() + [
-            HBHTTPServerHandler(responder: responder, configuration: self.configuration),
-        ]
-    }
-
-    public var port: Int? {
-        if self.channel != nil {
-            return self.channel?.localAddress?.port
-        } else if self.configuration.address.port != 0 {
-            return self.configuration.address.port
-        }
-        return nil
+        return (channel, quiesce)
     }
 
     /// create a BSD sockets based bootstrap
-    private func createSocketsBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap {
+    private func createSocketsBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap {
         return ServerBootstrap(group: self.eventLoopGroup)
             // Specify backlog and enable SO_REUSEADDR for the server itself
             .serverChannelOption(ChannelOptions.backlog, value: numericCast(self.configuration.backlog))
@@ -197,8 +256,7 @@ public final class HBHTTPServer {
 
     #if canImport(Network)
     /// create a NIOTransportServices bootstrap using Network.framework
-    @available(macOS 10.14, iOS 12, tvOS 12, *)
-    private func createTSBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap? {
+    private func createTSBootstrap(quiesce: ServerQuiescingHelper, childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>) -> HTTPServerBootstrap? {
         guard let bootstrap = NIOTSListenerBootstrap(validatingGroup: self.eventLoopGroup)?
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: self.configuration.reuseAddress ? 1 : 0)
             .serverChannelInitializer({ channel in
@@ -218,10 +276,6 @@ public final class HBHTTPServer {
         return bootstrap
     }
     #endif
-
-    /// list of child channel handlers
-    private var childChannelHandlers: HBHTTPChannelHandlers
-    private var tlsChannelHandler: (() -> RemovableChannelHandler)?
 }
 
 /// Protocol for bootstrap.
