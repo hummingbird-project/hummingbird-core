@@ -36,9 +36,10 @@ class TransportServicesTests: XCTestCase {
         let server = HBHTTPServer(
             group: eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: HelloResponder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: HelloResponder()) { client in
+        try await testServer(server) { client in
             let response = try await client.get("/")
             var body = try XCTUnwrap(response.body)
             XCTAssertEqual(body.readString(length: body.readableBytes), "Hello")
@@ -59,12 +60,12 @@ class TransportServicesTests: XCTestCase {
         let server = HBHTTPServer(
             group: eventLoopGroup,
             configuration: configuration,
+            responder: HelloResponder(),
             logger: Logger(label: "HB")
         )
         try await testServer(
             server,
-            clientConfiguration: .init(tlsConfiguration: self.getClientTLSConfiguration(), serverName: testServerName),
-            responder: HelloResponder()
+            clientConfiguration: .init(tlsConfiguration: self.getClientTLSConfiguration(), serverName: testServerName)
         ) { client in
             let response = try await client.get("/")
             var body = try XCTUnwrap(response.body)

@@ -325,7 +325,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
 extension EventLoopFuture {
     /// When EventLoopFuture has any result the callback is called with the Result. The callback returns an EventLoopFuture<>
     /// which should be completed before result is passed on
-    fileprivate func flatAlways<NewValue>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Result<Value, Error>) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+    fileprivate func flatAlways<NewValue>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping @Sendable (Result<Value, Error>) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
         let next = eventLoop.makePromise(of: NewValue.self)
         self.whenComplete { result in
             switch result {

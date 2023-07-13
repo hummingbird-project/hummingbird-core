@@ -26,6 +26,7 @@ import NIOTransportServices
 public actor HBHTTPServer {
     enum State: CustomStringConvertible {
         case initial(
+            responder: HBHTTPResponder,
             childChannelInitializer: HBChannelInitializer
         )
         case starting
@@ -83,21 +84,22 @@ public actor HBHTTPServer {
     public init(
         group: EventLoopGroup,
         configuration: Configuration,
+        responder: HBHTTPResponder,
         childChannelInitializer: HBChannelInitializer = HTTP1Channel(),
         logger: Logger
     ) {
         self.eventLoopGroup = group
         self.configuration = configuration
-        self.state = .initial(childChannelInitializer: childChannelInitializer)
+        self.state = .initial(responder: responder, childChannelInitializer: childChannelInitializer)
         self.logger = logger
     }
 
     /// Start server
     /// - Parameter responder: Object that provides responses to requests sent to the server
     /// - Returns: EventLoopFuture that is fulfilled when server has started
-    public func start(responder: HBHTTPResponder) async throws {
+    public func start() async throws {
         switch self.state {
-        case .initial(let childChannelInitializer):
+        case .initial(let responder, let childChannelInitializer):
             self.state = .starting
             let (channel, quiescingHelper) = try await self.makeServer(
                 httpChannelInitializer: childChannelInitializer,

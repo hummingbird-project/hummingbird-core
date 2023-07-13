@@ -52,9 +52,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: HelloResponder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: HelloResponder()) { client in
+        try await testServer(server) { client in
             let response = try await client.get("/")
             var body = try XCTUnwrap(response.body)
             XCTAssertEqual(body.readString(length: body.readableBytes), "Hello")
@@ -70,9 +71,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: ErrorResponder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: ErrorResponder()) { client in
+        try await testServer(server) { client in
             let response = try await client.get("/")
             XCTAssertEqual(response.status, .unauthorized)
             XCTAssertEqual(response.headers["content-length"].first, "0")
@@ -103,9 +105,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -118,9 +121,10 @@ class HummingBirdCoreTests: XCTestCase {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 let size = ManagedAtomic(0)
                 let allocator = context.channel.allocator
-                request.body.stream!.consumeAll(on: context.eventLoop) { buffer in
+                let eventLoop = context.eventLoop
+                request.body.stream!.consumeAll(on: eventLoop) { buffer in
                     size.wrappingIncrement(by: buffer.readableBytes, ordering: .relaxed)
-                    return context.eventLoop.makeSucceededFuture(())
+                    return eventLoop.makeSucceededFuture(())
                 }
                 .whenComplete { result in
                     switch result {
@@ -139,9 +143,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 450_000)
             let response = try await client.post("/", body: buffer)
             var body = try XCTUnwrap(response.body)
@@ -174,9 +179,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -208,9 +214,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -242,9 +249,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -276,9 +284,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -311,9 +320,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxStreamingBufferSize: 256 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -354,11 +364,12 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: Responder(),
             childChannelInitializer: TestHTTP1Channel(additionalChannels: [SlowInputChannelHandler()]),
             logger: Logger(label: "HB")
         )
 
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 1_140_000)
             let response = try await client.post("/", body: buffer)
             let body = try XCTUnwrap(response.body)
@@ -390,11 +401,12 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: Responder(),
             childChannelInitializer: TestHTTP1Channel(additionalChannels: [CreateErrorHandler()]),
             logger: Logger(label: "HB")
         )
 
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 32)
             let response = try await client.post("/", body: buffer)
             XCTAssertEqual(response.status, .insufficientStorage)
@@ -436,11 +448,12 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: Responder(),
             childChannelInitializer: TestHTTP1Channel(additionalChannels: [BreakupHTTPBodyChannelHandler()]),
             logger: Logger(label: "HB")
         )
 
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 16384)
             let response = try await client.post("/", body: buffer)
             XCTAssertEqual(response.status, .accepted)
@@ -468,9 +481,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxUploadSize: 64 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 320_000)
             let response = try await client.post("/", body: buffer)
             XCTAssertEqual(response.status, .payloadTooLarge)
@@ -498,9 +512,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxUploadSize: 64 * 1024),
+            responder: Responder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: Responder()) { client in
+        try await testServer(server) { client in
             let buffer = self.randomBuffer(size: 320_000)
             let response = try await client.post("/", body: buffer)
             XCTAssertEqual(response.status, .payloadTooLarge)
@@ -527,9 +542,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), maxUploadSize: 64 * 1024),
+            responder: WaitResponder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: WaitResponder()) { client in
+        try await testServer(server) { client in
             try await withThrowingTaskGroup(of: Void.self) { group in
                 let waitTimes: [Int] = (0..<16).map { _ in Int.random(in: 0..<50) }
                 for time in waitTimes {
@@ -549,9 +565,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0)),
+            responder: HelloResponder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: HelloResponder()) { client in
+        try await testServer(server) { client in
             try await withTimeout(.seconds(5)) {
                 _ = try await client.get("/", headers: ["connection": "close"])
                 let channel = try await client.channelPromise.futureResult.get()
@@ -585,10 +602,11 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), idleTimeoutConfiguration: .init(readTimeout: .seconds(1))),
+            responder: HelloResponder(),
             childChannelInitializer: TestHTTP1Channel(additionalChannels: [HTTPServerIncompleteRequest()]),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: HelloResponder()) { client in
+        try await testServer(server) { client in
             try await withTimeout(.seconds(5)) {
                 do {
                     _ = try await client.get("/", headers: ["connection": "keep-alive"])
@@ -605,9 +623,10 @@ class HummingBirdCoreTests: XCTestCase {
         let server = HBHTTPServer(
             group: Self.eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), idleTimeoutConfiguration: .init(writeTimeout: .seconds(1))),
+            responder: HelloResponder(),
             logger: Logger(label: "HB")
         )
-        try await testServer(server, responder: HelloResponder()) { client in
+        try await testServer(server) { client in
             try await withTimeout(.seconds(5)) {
                 _ = try await client.get("/", headers: ["connection": "keep-alive"])
                 let channel = try await client.channelPromise.futureResult.get()

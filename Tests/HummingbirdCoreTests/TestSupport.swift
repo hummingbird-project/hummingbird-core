@@ -46,10 +46,9 @@ public struct TestHTTP1Channel: HBChannelInitializer {
 public func testServer(
     _ server: HBHTTPServer,
     clientConfiguration: HBXCTClient.Configuration = .init(),
-    responder: HBHTTPResponder,
     _ test: (HBXCTClient) async throws -> Void
 ) async throws {
-    try await server.start(responder: responder)
+    try await server.start()
     let client = await HBXCTClient(
         host: "localhost",
         port: server.port!,

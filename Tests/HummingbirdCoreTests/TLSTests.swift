@@ -30,13 +30,13 @@ class HummingBirdTLSTests: XCTestCase {
         let server = try HBHTTPServer(
             group: eventLoopGroup,
             configuration: .init(address: .hostname(port: 0), serverName: testServerName),
+            responder: HelloResponder(),
             childChannelInitializer: HTTP1WithTLSChannel(tlsConfiguration: self.getServerTLSConfiguration()),
             logger: Logger(label: "HB")
         )
         try await testServer(
             server,
-            clientConfiguration: .init(tlsConfiguration: self.getClientTLSConfiguration(), serverName: testServerName),
-            responder: HelloResponder()
+            clientConfiguration: .init(tlsConfiguration: self.getClientTLSConfiguration(), serverName: testServerName)
         ) { client in
             let response = try await client.get("/")
             var body = try XCTUnwrap(response.body)
