@@ -111,7 +111,7 @@ class ByteBufferStreamerTests: XCTestCase {
         let buffer = self.randomBuffer(size: 128_000)
         let eventLoop = self.elg.next()
 
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024)
 
             self.feedStreamer(streamer, buffer: buffer, eventLoop: eventLoop)
@@ -125,7 +125,7 @@ class ByteBufferStreamerTests: XCTestCase {
     func testFeedOffEventLoop() throws {
         let buffer = self.randomBuffer(size: 128_000)
         let eventLoop = self.elg.next()
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024)
 
             self.feedStreamer(streamer, buffer: buffer, eventLoop: self.elg.next())
@@ -140,7 +140,7 @@ class ByteBufferStreamerTests: XCTestCase {
         let buffer = self.randomBuffer(size: 128_000)
         let eventLoop = self.elg.next()
 
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024, maxStreamingBufferSize: 20 * 1024)
 
             self.feedStreamerWithBackPressure(streamer, buffer: buffer)
@@ -155,7 +155,7 @@ class ByteBufferStreamerTests: XCTestCase {
         let buffer = self.randomBuffer(size: 600_000)
         let eventLoop = self.elg.next()
 
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024, maxStreamingBufferSize: 64 * 1024)
 
             self.feedStreamerWithBackPressure(streamer, buffer: buffer)
@@ -170,7 +170,7 @@ class ByteBufferStreamerTests: XCTestCase {
         let buffer = self.randomBuffer(size: 400_000)
         let eventLoop = self.elg.next()
 
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024, maxStreamingBufferSize: 64 * 1024)
 
             self.feedStreamerWithDelays(streamer, buffer: buffer, eventLoop: eventLoop)
@@ -184,7 +184,7 @@ class ByteBufferStreamerTests: XCTestCase {
     func testFeedAndConsumeWithDelays() throws {
         let buffer = self.randomBuffer(size: 550_000)
         let eventLoop = self.elg.next()
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 1024 * 1024, maxStreamingBufferSize: 64 * 1024)
 
             self.feedStreamerWithDelays(streamer, buffer: buffer, eventLoop: eventLoop)
@@ -252,7 +252,7 @@ class ByteBufferStreamerTests: XCTestCase {
     func testMaxSize() throws {
         let buffer = self.randomBuffer(size: 60000)
         let eventLoop = self.elg.next()
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 32 * 1024)
             self.feedStreamer(streamer, buffer: buffer)
             return self.consumeStreamer(streamer, eventLoop: eventLoop).map { _ in
@@ -271,7 +271,7 @@ class ByteBufferStreamerTests: XCTestCase {
     func testCallingConsumeAfterEnd() throws {
         let buffer = self.randomBuffer(size: 1)
         let eventLoop = self.elg.next()
-        try eventLoop.flatSubmit {
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 32 * 1024)
             streamer.feed(.byteBuffer(buffer))
             streamer.feed(.end)
@@ -292,7 +292,7 @@ class ByteBufferStreamerTests: XCTestCase {
         struct MyError: Error {}
         var buffer = self.randomBuffer(size: 10000)
         let eventLoop = self.elg.next()
-        try eventLoop.flatSubmit { () in
+        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let streamer = HBByteBufferStreamer(eventLoop: eventLoop, maxSize: 32 * 1024)
 
             while buffer.readableBytes > 0 {
