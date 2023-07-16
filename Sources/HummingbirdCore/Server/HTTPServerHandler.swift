@@ -68,8 +68,18 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         case (.head(let head), .idle):
             self.state = .head(head)
 
+        case (.end, .head(let head)):
+            self.state = .idle
+            let request = HBHTTPRequest(head: head, body: .byteBuffer(nil))
+            self.readRequest(context: context, request: request)
+
         case (.body(let part), .head(let head)):
             self.state = .body(head, part)
+
+        case (.end, .body(let head, let buffer)):
+            self.state = .idle
+            let request = HBHTTPRequest(head: head, body: .byteBuffer(buffer))
+            self.readRequest(context: context, request: request)
 
         case (.body(let part), .body(let head, let buffer)):
             let streamer = HBByteBufferStreamer(
@@ -86,16 +96,6 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         case (.body(let part), .streamingBody(let streamer)):
             streamer.feed(.byteBuffer(part))
             self.state = .streamingBody(streamer)
-
-        case (.end, .head(let head)):
-            self.state = .idle
-            let request = HBHTTPRequest(head: head, body: .byteBuffer(nil))
-            self.readRequest(context: context, request: request)
-
-        case (.end, .body(let head, let buffer)):
-            self.state = .idle
-            let request = HBHTTPRequest(head: head, body: .byteBuffer(buffer))
-            self.readRequest(context: context, request: request)
 
         case (.end, .streamingBody(let streamer)):
             self.state = .idle
@@ -114,12 +114,6 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
     }
 
     func readRequest(context: ChannelHandlerContext, request: HBHTTPRequest) {
-        let streamer: HBByteBufferStreamer?
-        if case .stream(let s) = request.body {
-            streamer = s
-        } else {
-            streamer = nil
-        }
         let httpVersion = request.head.version
         let httpKeepAlive = request.head.isKeepAlive || httpVersion.major > 1
         let keepAlive = httpKeepAlive && (self.closeAfterResponseWritten == false || self.requestsInProgress > 1)
@@ -130,7 +124,7 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             if httpVersion.major == 1 {
                 response.head.headers.replaceOrAdd(name: "connection", value: keepAlive ? "keep-alive" : "close")
             }
-            self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
+            self.writeResponse(context: context, response: response, body: request.body, keepAlive: keepAlive)
             self.propagatedError = nil
             return
         }
@@ -152,20 +146,22 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
             }
             // if we are already running inside the context eventloop don't use `EventLoop.execute`
             if context.eventLoop.inEventLoop {
-                self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
+                self.writeResponse(context: context, response: response, body: request.body, keepAlive: keepAlive)
             } else {
                 context.eventLoop.execute {
-                    self.writeResponse(context: context, response: response, streamer: streamer, keepAlive: keepAlive)
+                    self.writeResponse(context: context, response: response, body: request.body, keepAlive: keepAlive)
                 }
             }
         }
     }
 
-    func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, streamer: HBByteBufferStreamer?, keepAlive: Bool) {
+    func writeResponse(context: ChannelHandlerContext, response: HBHTTPResponse, body: HBRequestBody, keepAlive: Bool) {
         self.writeHTTPParts(context: context, response: response).whenComplete { _ in
             // once we have finished writing the response we can drop the request body
             // if we are streaming we need to wait until the request has finished streaming
-            if let streamer = streamer {
+            if case .idle = self.state,
+               case .stream(let streamer) = body
+            {
                 streamer.drop().whenComplete { _ in
                     if keepAlive == false {
                         context.close(promise: nil)
