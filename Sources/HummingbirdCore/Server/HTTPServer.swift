@@ -89,8 +89,12 @@ public final class HBHTTPServer {
     /// - Returns: EventLoopFuture that is fulfilled when server has started
     public func start(responder: HBHTTPResponder) -> EventLoopFuture<Void> {
         func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
-            let tlsChannelHandler = self.tlsChannelHandler?()
-            return channel.pipeline.addHandlers(tlsChannelHandler.map { [$0] } ?? []).flatMap {
+            if let tlsChannelHandler = self.tlsChannelHandler?() {
+                return channel.pipeline.addHandlers(tlsChannelHandler).flatMap {
+                    let childHandlers = self.getChildChannelHandlers(responder: responder)
+                    return self.httpChannelInitializer.initialize(channel: channel, childHandlers: childHandlers, configuration: self.configuration)
+                }
+            } else {
                 let childHandlers = self.getChildChannelHandlers(responder: responder)
                 return self.httpChannelInitializer.initialize(channel: channel, childHandlers: childHandlers, configuration: self.configuration)
             }
