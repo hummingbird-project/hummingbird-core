@@ -82,6 +82,7 @@ public protocol HBResponseBodyStreamer: Sendable {
 extension HBResponseBodyStreamer {
     /// Call closure for every ByteBuffer streamed
     /// - Returns: When everything has been streamed
+    @preconcurrency
     func write(on eventLoop: EventLoop, _ writeCallback: @escaping @Sendable (ByteBuffer) -> Void) -> EventLoopFuture<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
         @Sendable func _stream() {
