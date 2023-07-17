@@ -121,8 +121,8 @@ public actor HBHTTPServer {
                 preconditionFailure("We should only be running once")
 
             case .starting:
-                await onServerRunning()
                 self.state = .running(channel: channel, quiescingHelper: quiescingHelper)
+                await onServerRunning()
 
             case .shuttingDown, .shutdown:
                 try await channel.close()
