@@ -419,8 +419,6 @@ class HummingBirdCoreTests: XCTestCase {
     }
 
     func testStreamedRequestDrop() {
-        /// Embedded channels pass all the data down immediately. This is not a real world situation so this handler
-        /// can be used to fake TCP/IP data packets coming in arbitrary sizes (well at least for the HTTP body)
         class BreakupHTTPBodyChannelHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = HTTPServerRequestPart
             typealias InboundOut = HTTPServerRequestPart
@@ -465,6 +463,12 @@ class HummingBirdCoreTests: XCTestCase {
                 XCTAssertEqual(response.status, .accepted)
             }
         XCTAssertNoThrow(try future.wait())
+        // test we can send a second buffer
+        let future2 = client.post("/", headers: ["connection": "close"], body: buffer)
+            .flatMapThrowing { response in
+                XCTAssertEqual(response.status, .accepted)
+            }
+        XCTAssertNoThrow(try future2.wait())
     }
 
     func testMaxStreamedUploadSize() {

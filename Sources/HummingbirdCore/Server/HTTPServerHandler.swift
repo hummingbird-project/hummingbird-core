@@ -159,9 +159,13 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         self.writeHTTPParts(context: context, response: response).whenComplete { _ in
             // once we have finished writing the response we can drop the request body
             // if we are streaming we need to wait until the request has finished streaming
-            if case .idle = self.state,
-               case .stream(let streamer) = body
-            {
+            if case .idle = self.state {
+                if keepAlive == false {
+                    context.close(promise: nil)
+                    self.closeAfterResponseWritten = false
+                }
+
+            } else if case .stream(let streamer) = body {
                 streamer.drop().whenComplete { _ in
                     if keepAlive == false {
                         context.close(promise: nil)
