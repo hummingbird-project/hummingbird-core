@@ -76,8 +76,6 @@ public actor HBHTTPServer {
         case connectionClosing
         /// the server is shutting down
         case serverShuttingDown
-        /// the server has shutdown
-        case serverShutdown
     }
 
     /// Initialize HTTP server
@@ -135,7 +133,7 @@ public actor HBHTTPServer {
             throw Error.serverShuttingDown
 
         case .shutdown:
-            throw Error.serverShutdown
+            throw Error.serverNotRunning
         }
     }
 
