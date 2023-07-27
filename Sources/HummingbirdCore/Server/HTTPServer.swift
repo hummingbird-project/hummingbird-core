@@ -127,7 +127,7 @@ public actor HBHTTPServer {
             }
 
         case .starting, .running:
-            fatalError("Unexpected state")
+            fatalError("Cannot start a server that has already been started")
 
         case .shuttingDown:
             throw Error.serverShuttingDown
@@ -153,6 +153,8 @@ public actor HBHTTPServer {
             // We need to check the state here again since we just awaited above
             switch self.state {
             case .initial, .starting, .running, .shutdown:
+                // the only way to exit the `shuttingDown` state is from here so if the
+                // state is anything else from `shuttingDown` something bad has happened
                 fatalError("Unexpected state")
 
             case .shuttingDown:
