@@ -66,7 +66,7 @@ public actor HBHTTPServer {
     /// Server configuration
     public let configuration: Configuration
     /// Additional channel handlers
-    var additionalChannelHandlers: @Sendable () -> [any RemovableChannelHandler]
+    let additionalChannelHandlers: @Sendable () -> [any RemovableChannelHandler]
 
     /// HTTP server errors
     public enum Error: Swift.Error {
