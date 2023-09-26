@@ -12,12 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
+
 /// Address to bind server to
 public enum HBBindAddress {
     /// bind address define by host and port
     case hostname(_ host: String = "127.0.0.1", port: Int = 8080)
     /// bind address defined by unxi domain socket
     case unixDomainSocket(path: String)
+    /// a custom function used to perform the HTTPServerBootstrap binding
+    case custom((HTTPServerBootstrap) -> EventLoopFuture<Channel>)
 
     /// if address is hostname and port return port
     public var port: Int? {

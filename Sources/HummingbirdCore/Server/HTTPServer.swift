@@ -133,6 +133,12 @@ public final class HBHTTPServer {
                     self.channel = channel
                     responder.logger.info("Server started and listening on socket path \(path)")
                 }
+        case .custom(let bindFunction):
+            bindFuture = bindFunction(bootstrap)
+                .map { channel in
+                    self.channel = channel
+                    responder.logger.info("Server started and listening using custom binding function")
+                }
         }
 
         return bindFuture
@@ -229,9 +235,11 @@ public final class HBHTTPServer {
 }
 
 /// Protocol for bootstrap.
-protocol HTTPServerBootstrap {
+public protocol HTTPServerBootstrap {
     func bind(host: String, port: Int) -> EventLoopFuture<Channel>
     func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
+    func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
+    func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 }
 
 // Extend both `ServerBootstrap` and `NIOTSListenerBootstrap` to conform to `HTTPServerBootstrap`
