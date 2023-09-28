@@ -718,6 +718,41 @@ class HummingBirdCoreTests: XCTestCase {
         }
         XCTAssertNoThrow(try timeoutPromise.futureResult.wait())
     }
+
+    func testCustomBindAddress() throws
+    {
+        struct Responder: HBHTTPResponder
+        {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                onComplete(.failure(HBHTTPError(.unauthorized)))
+            }
+        }
+
+        // Set the channel option to a non-standard value in the custom bind address function, and then verify that the
+        // value has been set after starting the server.
+        // We're testing `SocketOption` option specifically because it is supported by both the `ServerBootstrap` and
+        // `NIOTSListenerBootstrap`, allowing this test to be run on all platforms.
+        let channelValue: SocketOptionValue = 12345678
+        let channelOption = ChannelOptions.Types.SocketOption(level: IPPROTO_TCP, name: TCP_KEEPCNT)
+
+        var didCallCustomBind = false
+        let eventLoopGroup = Self.eventLoopGroup!
+        let address = HBBindAddress.custom { serverBootstrap in
+            didCallCustomBind = true
+            return serverBootstrap.serverChannelOption(channelOption, value: channelValue)
+                .bind(host: "127.0.0.1", port: 0)
+        }
+        let server = HBHTTPServer(group: eventLoopGroup, configuration: .init(address: address))
+        XCTAssertNoThrow(try server.start(responder: Responder()).wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        XCTAssertTrue(didCallCustomBind)
+        guard let channel = server.channel else
+        {
+            throw HBHTTPServer.Error.serverNotRunning
+        }
+        XCTAssertEqual(channelValue, try channel.getOption(channelOption).wait())
+    }
 }
 
 /// Channel Handler for serializing request header and data
