@@ -236,9 +236,33 @@ public final class HBHTTPServer {
 
 /// Protocol for bootstrap.
 public protocol HTTPServerBootstrap {
+    /// Bind the server channel to `host` and `port`.
+    ///
+    /// - parameters:
+    ///     - host: The host to bind on.
+    ///     - port: The port to bind on.
     func bind(host: String, port: Int) -> EventLoopFuture<Channel>
+
+    /// Bind the server channel to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
     func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
+    
+    /// Specifies a `ChannelOption` to be applied to the server channel.
+    ///
+    /// - note: To specify options for the accepted child channels, look at `HTTPServerBootstrap.childChannelOption`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
     func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
+    
+    /// Specifies a `ChannelOption` to be applied to the accepted child channels.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
     func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 }
 
