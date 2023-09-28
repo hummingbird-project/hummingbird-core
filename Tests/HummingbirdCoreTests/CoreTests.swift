@@ -169,6 +169,7 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try future.wait())
     }
 
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     func testConsumeBodyInTask() {
         struct Responder: HBHTTPResponder {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
