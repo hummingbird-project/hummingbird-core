@@ -733,7 +733,7 @@ class HummingBirdCoreTests: XCTestCase {
         // value has been set after starting the server.
         // We're testing `SocketOption` option specifically because it is supported by both the `ServerBootstrap` and
         // `NIOTSListenerBootstrap`, allowing this test to be run on all platforms.
-        let channelValue: SocketOptionValue = 12345678
+        let channelValue: SocketOptionValue = 123
         let channelOption = ChannelOptions.Types.SocketOption(level: IPPROTO_TCP, name: TCP_KEEPCNT)
 
         var didCallCustomBind = false
