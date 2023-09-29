@@ -248,7 +248,7 @@ public protocol HTTPServerBootstrap {
     /// - parameters:
     ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
     func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
-    
+
     /// Specifies a `ChannelOption` to be applied to the server channel.
     ///
     /// - note: To specify options for the accepted child channels, look at `HTTPServerBootstrap.childChannelOption`.
@@ -257,7 +257,7 @@ public protocol HTTPServerBootstrap {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
-    
+
     /// Specifies a `ChannelOption` to be applied to the accepted child channels.
     ///
     /// - parameters:

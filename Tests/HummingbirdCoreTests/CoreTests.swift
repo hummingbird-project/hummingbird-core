@@ -720,10 +720,8 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try timeoutPromise.futureResult.wait())
     }
 
-    func testCustomBindAddress() throws
-    {
-        struct Responder: HBHTTPResponder
-        {
+    func testCustomBindAddress() throws {
+        struct Responder: HBHTTPResponder {
             func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
                 onComplete(.failure(HBHTTPError(.unauthorized)))
             }
@@ -748,8 +746,7 @@ class HummingBirdCoreTests: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         XCTAssertTrue(didCallCustomBind)
-        guard let channel = server.channel else
-        {
+        guard let channel = server.channel else {
             throw HBHTTPServer.Error.serverNotRunning
         }
         XCTAssertEqual(channelValue, try channel.getOption(channelOption).wait())
