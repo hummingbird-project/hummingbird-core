@@ -41,10 +41,10 @@ struct HTTP2UpgradeChannelInitializer: HBChannelInitializer {
     func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void> {
         channel.configureHTTP2SecureUpgrade(
             h2ChannelConfigurator: { channel in
-                http2.initialize(channel: channel, childHandlers: childHandlers, configuration: configuration)
+                self.http2.initialize(channel: channel, childHandlers: childHandlers, configuration: configuration)
             },
             http1ChannelConfigurator: { channel in
-                http1.initialize(channel: channel, childHandlers: childHandlers, configuration: configuration)
+                self.http1.initialize(channel: channel, childHandlers: childHandlers, configuration: configuration)
             }
         )
     }
