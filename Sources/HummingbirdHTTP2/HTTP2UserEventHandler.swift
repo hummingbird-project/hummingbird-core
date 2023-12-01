@@ -28,6 +28,12 @@ final class HTTP2UserEventHandler: ChannelInboundHandler, RemovableChannelHandle
         case is ChannelShouldQuiesceEvent:
             self.quiesce(context: context)
 
+        case let evt as IdleStateHandler.IdleStateEvent where evt == .read:
+            self.processIdleReadState(context: context)
+
+        case let evt as IdleStateHandler.IdleStateEvent where evt == .write:
+            self.processIdleWriteState(context: context)
+
         default:
             break
         }
@@ -53,8 +59,7 @@ final class HTTP2UserEventHandler: ChannelInboundHandler, RemovableChannelHandle
             if numberOpenStreams > 1 {
                 self.state = .quiescing(numberOpenStreams: numberOpenStreams - 1)
             } else {
-                self.state = .closing
-                context.close(promise: nil)
+                self.close(context: context)
             }
         case .closing:
             assertionFailure("If we have initiated a close, there should be no streams to close.")
@@ -67,10 +72,53 @@ final class HTTP2UserEventHandler: ChannelInboundHandler, RemovableChannelHandle
             if numberOpenStreams > 0 {
                 self.state = .quiescing(numberOpenStreams: numberOpenStreams)
             } else {
-                self.state = .closing
-                context.close(promise: nil)
+                self.close(context: context)
             }
         case .quiescing, .closing:
+            break
+        }
+    }
+
+    func processIdleReadState(context: ChannelHandlerContext) {
+        switch self.state {
+        case .active(let numberOpenStreams):
+            // if we get a read idle state and there are streams open
+            if numberOpenStreams > 0 {
+                self.close(context: context)
+            }
+        case .quiescing(let numberOpenStreams):
+            // if we get a read idle state and there are streams open
+            if numberOpenStreams > 0 {
+                self.close(context: context)
+            }
+        default:
+            break
+        }
+    }
+
+    func processIdleWriteState(context: ChannelHandlerContext) {
+        switch self.state {
+        case .active(let numberOpenStreams):
+            // if we get a write idle state and there are no longer any streams open
+            if numberOpenStreams == 0 {
+                self.close(context: context)
+            }
+        case .quiescing(let numberOpenStreams):
+            // if we get a write idle state and there are no longer any streams open
+            if numberOpenStreams == 0 {
+                self.close(context: context)
+            }
+        default:
+            break
+        }
+    }
+
+    func close(context: ChannelHandlerContext) {
+        switch self.state {
+        case .active, .quiescing:
+            self.state = .closing
+            context.close(promise: nil)
+        case .closing:
             break
         }
     }

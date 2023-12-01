@@ -22,13 +22,35 @@ extension HBHTTPServer {
     /// you will then be adding two TLS handlers.
     ///
     /// - Parameter tlsConfiguration: TLS configuration
+    @available(*, deprecated, renamed: "addHTTP2Upgrade(tlsConfiguration:idleTimeoutConfiguration:)")
     @discardableResult public func addHTTP2Upgrade(tlsConfiguration: TLSConfiguration) throws -> HBHTTPServer {
         var tlsConfiguration = tlsConfiguration
         tlsConfiguration.applicationProtocols.append("h2")
         tlsConfiguration.applicationProtocols.append("http/1.1")
         let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
 
-        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer()
+        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer(idleTimeoutConfiguration: nil)
+        return self.addTLSChannelHandler(NIOSSLServerHandler(context: sslContext))
+    }
+
+    /// Add HTTP2 secure upgrade handler
+    ///
+    /// HTTP2 secure upgrade requires a TLS connection so this will add a TLS handler as well. Do not call `addTLS()` inconjunction with this as
+    /// you will then be adding two TLS handlers.
+    ///
+    /// - Parameters:
+    ///   - tlsConfiguration: TLS configuration
+    ///   - idleTimeoutConfiguration: Configure when server should close the channel based of idle events
+    @discardableResult public func addHTTP2Upgrade(
+        tlsConfiguration: TLSConfiguration,
+        idleTimeoutConfiguration: HTTP2ChannelInitializer.IdleStateHandlerConfiguration
+    ) throws -> HBHTTPServer {
+        var tlsConfiguration = tlsConfiguration
+        tlsConfiguration.applicationProtocols.append("h2")
+        tlsConfiguration.applicationProtocols.append("http/1.1")
+        let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
+
+        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer(idleTimeoutConfiguration: idleTimeoutConfiguration)
         return self.addTLSChannelHandler(NIOSSLServerHandler(context: sslContext))
     }
 }
