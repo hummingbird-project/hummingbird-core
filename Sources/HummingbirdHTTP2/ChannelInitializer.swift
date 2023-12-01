@@ -23,13 +23,13 @@ public struct HTTP2ChannelInitializer: HBChannelInitializer {
     public init() {}
 
     public func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void> {
-        return channel.configureHTTP2Pipeline(mode: .server) { streamChannel -> EventLoopFuture<Void> in
+        channel.configureHTTP2Pipeline(mode: .server) { streamChannel -> EventLoopFuture<Void> in
             return streamChannel.pipeline.addHandler(HTTP2FramePayloadToHTTP1ServerCodec()).flatMap { _ in
                 streamChannel.pipeline.addHandlers(childHandlers)
             }
-            .map { _ in }
+        }.flatMap { _ in
+            channel.pipeline.addHandler(HTTP2UserEventHandler())
         }
-        .map { _ in }
     }
 }
 
