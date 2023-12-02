@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import HummingbirdCore
+import NIOCore
 import NIOSSL
 
 extension HBHTTPServer {
@@ -22,14 +23,14 @@ extension HBHTTPServer {
     /// you will then be adding two TLS handlers.
     ///
     /// - Parameter tlsConfiguration: TLS configuration
-    @available(*, deprecated, renamed: "addHTTP2Upgrade(tlsConfiguration:idleTimeoutConfiguration:)")
+    @available(*, deprecated, renamed: "addHTTP2Upgrade(tlsConfiguration:idleReadTimeout:)")
     @discardableResult public func addHTTP2Upgrade(tlsConfiguration: TLSConfiguration) throws -> HBHTTPServer {
         var tlsConfiguration = tlsConfiguration
         tlsConfiguration.applicationProtocols.append("h2")
         tlsConfiguration.applicationProtocols.append("http/1.1")
         let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
 
-        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer(idleTimeoutConfiguration: nil)
+        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer(idleReadTimeout: nil)
         return self.addTLSChannelHandler(NIOSSLServerHandler(context: sslContext))
     }
 
@@ -43,14 +44,14 @@ extension HBHTTPServer {
     ///   - idleTimeoutConfiguration: Configure when server should close the channel based of idle events
     @discardableResult public func addHTTP2Upgrade(
         tlsConfiguration: TLSConfiguration,
-        idleTimeoutConfiguration: HTTP2ChannelInitializer.IdleStateHandlerConfiguration
+        idleReadTimeout: TimeAmount
     ) throws -> HBHTTPServer {
         var tlsConfiguration = tlsConfiguration
         tlsConfiguration.applicationProtocols.append("h2")
         tlsConfiguration.applicationProtocols.append("http/1.1")
         let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
 
-        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer(idleTimeoutConfiguration: idleTimeoutConfiguration)
+        self.httpChannelInitializer = HTTP2UpgradeChannelInitializer(idleReadTimeout: idleReadTimeout)
         return self.addTLSChannelHandler(NIOSSLServerHandler(context: sslContext))
     }
 }

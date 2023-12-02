@@ -20,33 +20,16 @@ import NIOSSL
 
 /// Setup child channel for HTTP2
 public struct HTTP2ChannelInitializer: HBChannelInitializer {
-    /// Idle state handler configuration for HTTP2 channel
-    public struct IdleStateHandlerConfiguration: Sendable {
-        /// timeout when reading a request
-        let readTimeout: TimeAmount
-        /// timeout since last writing a response
-        let writeTimeout: TimeAmount
-
-        public init(readTimeout: TimeAmount = .seconds(30), writeTimeout: TimeAmount = .minutes(3)) {
-            self.readTimeout = readTimeout
-            self.writeTimeout = writeTimeout
-        }
-
-        public var idleStateHandler: IdleStateHandler {
-            IdleStateHandler(readTimeout: self.readTimeout, writeTimeout: self.writeTimeout)
-        }
-    }
-
     /// Initialise HTTP2ChannelInitializer
-    @available(*, deprecated, renamed: "init(idleTimeoutConfiguration:)")
+    @available(*, deprecated, renamed: "init(idleReadTimeout:)")
     public init() {
-        self.idleTimeoutConfiguration = nil
+        self.idleReadTimeout = nil
     }
 
     /// Initialise HTTP2ChannelInitializer
     /// - Parameter idleTimeoutConfiguration: Configure when server should close the channel based of idle events
-    public init(idleTimeoutConfiguration: IdleStateHandlerConfiguration?) {
-        self.idleTimeoutConfiguration = idleTimeoutConfiguration
+    public init(idleReadTimeout: TimeAmount?) {
+        self.idleReadTimeout = idleReadTimeout
     }
 
     public func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void> {
@@ -59,8 +42,8 @@ public struct HTTP2ChannelInitializer: HBChannelInitializer {
                 channel.pipeline.addHandler(HTTP2UserEventHandler())
             }
         }
-        if let idleTimeoutConfiguration = self.idleTimeoutConfiguration {
-            return channel.pipeline.addHandler(idleTimeoutConfiguration.idleStateHandler).flatMap {
+        if let idleReadTimeout = self.idleReadTimeout {
+            return channel.pipeline.addHandler(IdleStateHandler(readTimeout: idleReadTimeout)).flatMap {
                 configureHTTP2Pipeline()
             }
         } else {
@@ -68,7 +51,7 @@ public struct HTTP2ChannelInitializer: HBChannelInitializer {
         }
     }
 
-    let idleTimeoutConfiguration: IdleStateHandlerConfiguration?
+    let idleReadTimeout: TimeAmount?
 }
 
 /// Setup child channel for HTTP2 upgrade
@@ -76,9 +59,9 @@ struct HTTP2UpgradeChannelInitializer: HBChannelInitializer {
     var http1: HTTP1ChannelInitializer
     let http2: HTTP2ChannelInitializer
 
-    init(idleTimeoutConfiguration: HTTP2ChannelInitializer.IdleStateHandlerConfiguration?) {
+    init(idleReadTimeout: TimeAmount?) {
         self.http1 = HTTP1ChannelInitializer()
-        self.http2 = HTTP2ChannelInitializer(idleTimeoutConfiguration: idleTimeoutConfiguration)
+        self.http2 = HTTP2ChannelInitializer(idleReadTimeout: idleReadTimeout)
     }
 
     func initialize(channel: Channel, childHandlers: [RemovableChannelHandler], configuration: HBHTTPServer.Configuration) -> EventLoopFuture<Void> {
