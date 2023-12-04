@@ -98,16 +98,9 @@ final class HTTP2UserEventHandler: ChannelInboundHandler, RemovableChannelHandle
 
     func processIdleWriteState(context: ChannelHandlerContext) {
         switch self.state {
-        case .active(let numberOpenStreams):
+        case .active(0), .quiescing(0):
             // if we get a write idle state and there are no longer any streams open
-            if numberOpenStreams == 0 {
-                self.close(context: context)
-            }
-        case .quiescing(let numberOpenStreams):
-            // if we get a write idle state and there are no longer any streams open
-            if numberOpenStreams == 0 {
-                self.close(context: context)
-            }
+            self.close(context: context)
         default:
             break
         }
