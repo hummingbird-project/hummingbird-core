@@ -42,7 +42,7 @@ public struct HTTP2ChannelInitializer: HBChannelInitializer {
                 channel.pipeline.addHandler(HTTP2UserEventHandler())
             }
         }
-        if let idleReadTimeout = self.idleReadTimeout {
+        if let idleReadTimeout {
             return channel.pipeline.addHandler(IdleStateHandler(readTimeout: idleReadTimeout)).flatMap {
                 configureHTTP2Pipeline()
             }
