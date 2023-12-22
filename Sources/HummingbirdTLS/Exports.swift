@@ -12,6 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=5.8)
 @_exported @_documentation(visibility: internal) import class NIOSSL.NIOSSLCertificate
 @_exported @_documentation(visibility: internal) import class NIOSSL.NIOSSLPrivateKey
 @_exported @_documentation(visibility: internal) import struct NIOSSL.TLSConfiguration
+#else
+@_exported import class NIOSSL.NIOSSLCertificate
+@_exported import class NIOSSL.NIOSSLPrivateKey
+@_exported import struct NIOSSL.TLSConfiguration
+#endif
