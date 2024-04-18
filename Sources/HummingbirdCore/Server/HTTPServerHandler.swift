@@ -217,24 +217,25 @@ final class HBHTTPServerHandler: ChannelDuplexHandler, RemovableChannelHandler {
         }
         context.write(self.wrapOutboundOut(.head(head)), promise: nil)
         assert(!isInvalidHeaderError(self.propagatedError), "Invalid header")
+        let promise = context.eventLoop.makePromise(of: Void.self)
         switch response.body {
         case .byteBuffer(let buffer):
             context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
             // don't use error from writeAndFlush so return static version instead of allocating
             // a new EventLoopFuture.
-            return context.eventLoop.makeSucceededVoidFuture()
+            return promise.futureResult
         case .stream(let streamer):
             return streamer.write(on: context.eventLoop) { buffer in
                 context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
             }
             .flatAlways { _ in
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-                return context.eventLoop.makeSucceededVoidFuture()
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+                return promise.futureResult
             }
         case .empty:
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-            return context.eventLoop.makeSucceededVoidFuture()
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: promise)
+            return promise.futureResult
         }
     }
 

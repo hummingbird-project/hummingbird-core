@@ -608,6 +608,28 @@ class HummingBirdCoreTests: XCTestCase {
         XCTAssertNoThrow(try timeoutPromise.futureResult.wait())
     }
 
+    /// test server sends full payload if "connection" header is set to "close"
+    func testConnectionCloseLargePayload() throws {
+        struct HelloResponder: HBHTTPResponder {
+            func respond(to request: HBHTTPRequest, context: ChannelHandlerContext, onComplete: @escaping (Result<HBHTTPResponse, Error>) -> Void) {
+                let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+                let responseBody = context.channel.allocator.buffer(repeating: 1, count: 2_000_000)
+                let response = HBHTTPResponse(head: responseHead, body: .byteBuffer(responseBody))
+                onComplete(.success(response))
+            }
+        }
+        let server = HBHTTPServer(group: Self.eventLoopGroup, configuration: .init(address: .hostname(port: 0)))
+        XCTAssertNoThrow(try server.start(responder: HelloResponder()).wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let client = HBXCTClient(host: "localhost", port: server.port!, eventLoopGroupProvider: .createNew)
+        client.connect()
+        defer { XCTAssertNoThrow(try client.syncShutdown()) }
+
+        let response = try client.get("/", headers: ["connection": "close"]).wait()
+        XCTAssertEqual(response.body?.readableBytes, 2_000_000)
+    }
+
     /// Test we can run with an embedded channel. HummingbirdXCT uses this quite a lot
     func testEmbeddedChannel() {
         enum HTTPError: Error {
