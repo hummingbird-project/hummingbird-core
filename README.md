@@ -1,6 +1,6 @@
 # HummingbirdCore
 
-Swift NIO based HTTP server. The core HTTP server component for the [Hummingbird](https://github.com/hummingbird-project/hummingbird) web framework. 
+Swift NIO based HTTP server. The core HTTP server component for v1.0 of the [Hummingbird](https://github.com/hummingbird-project/hummingbird) web framework. 
 
 ## Usage
 
